@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: chainlink-cm
+    release: {{ .Release.Name }}
+  name: chainlink-cm
+data:
+  apicredentials: |
+    notreal@fakeemail.ch
+    twochains
+  node-password: T.tLHkcmwePT/p,]sYuntjwHKAsrhm#4eRs4LuKHwvHejWYAC2JP4M8HimwgmbaZ

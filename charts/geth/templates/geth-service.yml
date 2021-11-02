@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: geth-service
+spec:
+  ports:
+  - name: access
+    port: 8546
+    targetPort: 8546
+  type: ClusterIP
