@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: chainlink-node
-{{/*  generateName: chainlink-node-*/}}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -82,7 +81,7 @@ spec:
             - name: DATABASE_NAME
               value: chainlink
             - name: ETH_URL
-              value: ws://geth-service:8546
+              value: ws://geth:8546
             - name: ETH_CHAIN_ID
               value: "1337"
             - name: ALLOW_ORIGINS
@@ -146,13 +145,13 @@ spec:
             httpGet:
               path: /
               port: {{ .Values.chainlink.web_port }}
-            initialDelaySeconds: 90
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /
               port: {{ .Values.chainlink.web_port }}
-            initialDelaySeconds: 50
+            initialDelaySeconds: 10
             periodSeconds: 5
           resources:
             requests:

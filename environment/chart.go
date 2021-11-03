@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -43,13 +44,13 @@ type HelmChart struct {
 	Name          string
 	NamespaceName string
 	settings      *ChartSettings
-	env           *HelmEnvironment
+	env           *Environment
 	actionConfig  *action.Configuration
 	podsList      *v1.PodList
 }
 
 // NewHelmChart creates a new Helm chart wrapper
-func NewHelmChart(env *HelmEnvironment, cfg *ChartSettings) (*HelmChart, error) {
+func NewHelmChart(env *Environment, cfg *ChartSettings) (*HelmChart, error) {
 	hc := &HelmChart{
 		Name:          cfg.ReleaseName,
 		env:           env,
@@ -66,13 +67,13 @@ func NewHelmChart(env *HelmEnvironment, cfg *ChartSettings) (*HelmChart, error) 
 func (hc *HelmChart) Connect() error {
 	for _, connectionInfo := range hc.settings.PodsInfo {
 		rules := make([]string, 0)
-		for _, p := range connectionInfo.Ports {
+		for portName, port := range connectionInfo.Ports {
 			freePort := rand.Intn(MaxPort-MinPort) + MinPort
-			if p.Name == "" {
-				return fmt.Errorf("port %d must be named in helm chart", p.ContainerPort)
+			if portName == "" {
+				return fmt.Errorf("port %d must be named in helm chart", port)
 			}
-			connectionInfo.LocalPorts[p.Name] = freePort
-			rules = append(rules, fmt.Sprintf("%d:%d", freePort, p.ContainerPort))
+			connectionInfo.LocalPorts[portName] = freePort
+			rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
 		}
 		if len(rules) > 0 {
 			if hc.env.Config.Persistent {
@@ -93,7 +94,7 @@ func (hc *HelmChart) Connect() error {
 
 // Deploy deploys a chart and update config settings
 func (hc *HelmChart) Deploy() error {
-	if err := hc.DeployChart(); err != nil {
+	if err := hc.deployChart(); err != nil {
 		return err
 	}
 	if err := hc.enumerateApps(); err != nil {
@@ -122,8 +123,8 @@ func (hc *HelmChart) initAction() error {
 	return nil
 }
 
-// DeployChart deploys the helm Charts
-func (hc *HelmChart) DeployChart() error {
+// deployChart deploys the helm Charts
+func (hc *HelmChart) deployChart() error {
 	log.Info().Str("Path", hc.settings.Path).
 		Str("Release", hc.settings.ReleaseName).
 		Str("Namespace", hc.NamespaceName).
@@ -202,13 +203,13 @@ func (hc *HelmChart) updateChartSettings() error {
 				Str("Container", c.Name).
 				Interface("PodPorts", c.Ports).
 				Msg("Container info")
-			instanceKey := fmt.Sprintf("%s:%s", app, instance)
+			instanceKey := fmt.Sprintf("%s:%s:%s", app, instance, c.Name)
 			if _, ok := hc.settings.PodsInfo[instanceKey]; ok {
 				return fmt.Errorf("ambiguous instance key: %s", instanceKey)
 			}
-			pm := map[string]v1.ContainerPort{}
+			pm := map[string]int{}
 			for _, port := range c.Ports {
-				pm[port.Name] = port
+				pm[port.Name] = int(port.ContainerPort)
 			}
 			hc.settings.PodsInfo[instanceKey] = &ConnectionInfo{
 				PodName:    p.Name,
@@ -256,8 +257,10 @@ func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 	return uniqueLabels, nil
 }
 
-func (k *HelmEnvironment) killForwarder(pid int) error {
-	if pid == 0 {
+func (k *Environment) killForwarder(pid int) error {
+	// 0 means no process
+	// -1 can be set after detachment, don't try to kill it
+	if pid == 0 || pid == -1 {
 		return nil
 	}
 	cmd := exec.Command(
@@ -272,25 +275,43 @@ func (k *HelmEnvironment) killForwarder(pid int) error {
 	return nil
 }
 
-func (k *HelmEnvironment) runProcessForwarder(podName string, portRules []string) (int, error) {
-	cmd := exec.Command(
-		"kubectl",
-		"-n", k.Config.NamespaceName,
-		"port-forward",
-		fmt.Sprintf("%s/%s", "pods", podName),
-		strings.Join(portRules, " "),
-	)
-	err := cmd.Start()
+func forkProcess(processName string, args []string) (int, error) {
+	fork := NewForkProcess(
+		os.Stdin, os.Stdout, os.Stderr,
+		uint32(os.Getuid()), uint32(os.Getgid()), "/")
+	pid, err := fork.Exec(processName, args)
 	if err != nil {
-		return 0, errors.Wrapf(err, "failed to forward using cmd: %s", cmd.String())
+		return 0, errors.Wrapf(err, "unable to fork process")
 	}
-	log.Debug().
-		Str("Command", cmd.String()).
-		Msg("Forwarded ports")
-	return cmd.Process.Pid, nil
+	return pid, nil
 }
 
-func (k *HelmEnvironment) runGoForwarder(podName string, portRules []string) error {
+// runProcessForwarder forking "kubectl port-forward" command and gets PID
+func (k *Environment) runProcessForwarder(podName string, portRules []string) (int, error) {
+	portRulesStr := strings.Join(portRules, " ")
+	processArgs := []string{
+		k.Config.KubeCtlProcessName,
+		"-n",
+		k.Config.NamespaceName,
+		"port-forward",
+		fmt.Sprintf("%s/%s", "pods", podName),
+	}
+	processArgs = append(processArgs, portRules...)
+	log.Debug().
+		Str("Args", strings.Join(processArgs, " ")).
+		Msg("Process args")
+	pid, err := forkProcess(k.Config.KubeCtlProcessName, processArgs)
+	if err != nil {
+		return 0, err
+	}
+	log.Debug().
+		Interface("Ports", portRulesStr).
+		Msg("Forwarded ports")
+	return pid, nil
+}
+
+// runGoForwarder runs port forwarder as a goroutine
+func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 	roundTripper, upgrader, err := spdy.RoundTripperFor(k.k8sConfig)
 	if err != nil {
 		return err

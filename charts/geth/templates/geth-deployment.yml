@@ -166,6 +166,8 @@ spec:
             - "*"
             - --vmdebug
           ports:
+            - name: http-rpc
+              containerPort: 8544
             - name: ws-rpc
               containerPort: 8546
           resources:

@@ -27,6 +27,13 @@ func main() {
 				Usage:    "environment name",
 				Required: true,
 			},
+			&cli.StringFlag{
+				Name:     "kubectlProcess",
+				Aliases:  []string{"kctl"},
+				Value:    "/usr/local/bin/kubectl",
+				Usage:    "kubectl process name to use forking for port forwarding",
+				Required: false,
+			},
 		},
 		Commands: []*cli.Command{
 			{
@@ -35,21 +42,11 @@ func main() {
 				Usage:   "create new environment",
 				Action: func(c *cli.Context) error {
 					envName := c.String("environment")
+					kctlProcessName := c.String("kubectlProcess")
 					e, err := environment.NewEnvironment(&environment.HelmEnvironmentConfig{
-						Persistent: true,
-						Name:       envName,
-						ChartsInfo: map[string]*environment.ChartSettings{
-							"app-1": {
-								ReleaseName: "app-1",
-								Path:        filepath.Join(tools.ChartsRoot, "localterra_clone"),
-								Values:      nil,
-							},
-							"app-2": {
-								ReleaseName: "app-2",
-								Path:        filepath.Join(tools.ChartsRoot, "geth"),
-								Values:      nil,
-							},
-						},
+						Persistent:         true,
+						KubeCtlProcessName: kctlProcessName,
+						Name:               envName,
 					})
 					if err != nil {
 						return err
@@ -57,7 +54,21 @@ func main() {
 					if err := e.Init(); err != nil {
 						return err
 					}
-					if err := e.Deploy(); err != nil {
+					if err := e.AddChart(&environment.ChartSettings{
+						ReleaseName: "geth",
+						Path:        filepath.Join(tools.ChartsRoot, "geth"),
+						Values:      nil,
+					}); err != nil {
+						return err
+					}
+					if err := e.AddChart(&environment.ChartSettings{
+						ReleaseName: "chainlink",
+						Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+						Values:      nil,
+					}); err != nil {
+						return err
+					}
+					if err := e.DeployAll(); err != nil {
 						if err := e.Teardown(); err != nil {
 							return errors.Wrapf(err, "failed to shutdown namespace")
 						}
@@ -137,6 +148,6 @@ func main() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Error().Err(err).Send()
 	}
 }

@@ -7,12 +7,19 @@ TODO:
 - [x] Have persistent connection config for all charts
 - [x] Can connect/disconnect with particular chart and all of them at once
 - [x] Test cli interactions: deploy/connect/disconnect/shutdown
-- [x] Test programmatic API
+- [x] Minimal programmatic e2e test for deployments
+- [x] Test port forwarder forking on OS X
+- [ ] Test port forwarder forking on Linux
+- [ ] More tests with a different charts (services/dns) to check port forwarding
 
 #### CLI usage
 Install
 ```
 make install_cli
+```
+Usage docs
+```
+envcli -h
 ```
 
 Create new environment
@@ -39,3 +46,6 @@ envcli -n env-1 shutdown
 
 #### Usage as a library
 Have a look at tests in `environment/environment_test.go`
+
+#### Charts requirements
+Your applications must have `app: *any_app_name*` label, see examples in `charts`
