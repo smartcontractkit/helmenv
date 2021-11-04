@@ -22,6 +22,8 @@ const (
 	HelmInstallTimeout = 200 * time.Second
 	// DefaultK8sConfigPath the default path for kube
 	DefaultK8sConfigPath = ".kube/config"
+	// DefaultKubeCTLProcessPath default kubectl path if used as a CLI
+	DefaultKubeCTLProcessPath = "/usr/local/bin/kubectl"
 )
 
 // ConnectionInfo info about connected pod ports
@@ -33,19 +35,21 @@ type ConnectionInfo struct {
 	LocalPorts   map[string]int `json:"local_port"`
 }
 
-// HelmEnvironmentConfig environment config with all charts info
-type HelmEnvironmentConfig struct {
+// Config environment config with all charts info,
+// it is used both in runtime and can be persistent in JSON
+type Config struct {
 	Persistent         bool                      `json:"persistent"`
 	KubeCtlProcessName string                    `json:"kube_ctl_process_name"`
 	NamespaceName      string                    `json:"namespace_name"`
 	Name               string                    `json:"name"`
+	PresetMap          map[string]interface{}    `json:"preset_map"`
 	ChartsInfo         map[string]*ChartSettings `json:"chart_settings"`
 }
 
 // Environment environment build and deployed from several helm Charts
 type Environment struct {
 	CLISettings          *cli.EnvSettings
-	Config               *HelmEnvironmentConfig
+	Config               *Config
 	releaseName          string
 	Charts               map[string]*HelmChart
 	chartsDeploySequence []*HelmChart
@@ -54,13 +58,16 @@ type Environment struct {
 }
 
 // NewEnvironment creates new environment from charts
-func NewEnvironment(cfg *HelmEnvironmentConfig) (*Environment, error) {
+func NewEnvironment(cfg *Config) (*Environment, error) {
 	ks, kc, err := GetLocalK8sDeps()
 	if err != nil {
 		return nil, err
 	}
 	if cfg.ChartsInfo == nil {
 		cfg.ChartsInfo = map[string]*ChartSettings{}
+	}
+	if cfg.KubeCtlProcessName == "" {
+		cfg.KubeCtlProcessName = DefaultKubeCTLProcessPath
 	}
 	he := &Environment{
 		Config:               cfg,
@@ -153,7 +160,7 @@ func (k *Environment) Init() error {
 // SyncConfig dumps config in Persistent mode
 func (k *Environment) SyncConfig() error {
 	if k.Config.Persistent {
-		if err := DumpConfigJSON(k.Config, fmt.Sprintf("%s.json", k.releaseName)); err != nil {
+		if err := DumpConfig(k.Config, fmt.Sprintf("%s.json", k.releaseName)); err != nil {
 			return err
 		}
 	}
@@ -214,12 +221,12 @@ func (k *Environment) Disconnect() error {
 		log.Info().
 			Str("Release", c.Name).
 			Msg("Disconnecting")
-		for _, connectionInfo := range c.settings.PodsInfo {
+		for _, connectionInfo := range c.settings.ConnectionInfo {
 			if err := k.killForwarder(connectionInfo.ForwarderPID); err != nil {
 				return err
 			}
 		}
-		for _, ci := range c.settings.PodsInfo {
+		for _, ci := range c.settings.ConnectionInfo {
 			ci.ForwarderPID = 0
 			ci.LocalPorts = make(map[string]int)
 		}
@@ -230,8 +237,8 @@ func (k *Environment) Disconnect() error {
 	return nil
 }
 
-// LoadHelmEnvironment loads helm environment
-func LoadHelmEnvironment(cfg *HelmEnvironmentConfig) (*Environment, error) {
+// LoadEnvironment loads environment from config
+func LoadEnvironment(cfg *Config) (*Environment, error) {
 	log.Info().
 		Interface("Settings", cfg).
 		Msg("Loading environment")
@@ -250,4 +257,14 @@ func LoadHelmEnvironment(cfg *HelmEnvironmentConfig) (*Environment, error) {
 		he.Charts[hc.Name] = hc
 	}
 	return he, nil
+}
+
+// GetSecretField retrieves field data from k8s secret
+func (k *Environment) GetSecretField(namespace string, secretName string, fieldName string) (string, error) {
+	res, err := k.k8sClient.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metaV1.GetOptions{})
+	log.Debug().Interface("Data", res.Data).Send()
+	if err != nil {
+		return "", err
+	}
+	return string(res.Data[fieldName]), nil
 }

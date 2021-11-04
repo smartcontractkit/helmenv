@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/smartcontractkit/helmenv/environment"
+	"github.com/smartcontractkit/helmenv/preset"
 	"github.com/urfave/cli/v2"
-	"helmenv/environment"
-	"helmenv/tools"
 	"os"
-	"path/filepath"
 )
 
 func init() {
@@ -39,39 +37,25 @@ func main() {
 			{
 				Name:    "new",
 				Aliases: []string{"n"},
-				Usage:   "create new environment",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "preset",
+						Aliases:  []string{"p"},
+						Usage:    "environment preset name",
+						Required: true,
+					},
+				},
+				Usage: "create new environment",
 				Action: func(c *cli.Context) error {
 					envName := c.String("environment")
+					presetName := c.String("preset")
 					kctlProcessName := c.String("kubectlProcess")
-					e, err := environment.NewEnvironment(&environment.HelmEnvironmentConfig{
+					_, err := preset.UsePreset(presetName, &environment.Config{
 						Persistent:         true,
 						KubeCtlProcessName: kctlProcessName,
 						Name:               envName,
 					})
 					if err != nil {
-						return err
-					}
-					if err := e.Init(); err != nil {
-						return err
-					}
-					if err := e.AddChart(&environment.ChartSettings{
-						ReleaseName: "geth",
-						Path:        filepath.Join(tools.ChartsRoot, "geth"),
-						Values:      nil,
-					}); err != nil {
-						return err
-					}
-					if err := e.AddChart(&environment.ChartSettings{
-						ReleaseName: "chainlink",
-						Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
-						Values:      nil,
-					}); err != nil {
-						return err
-					}
-					if err := e.DeployAll(); err != nil {
-						if err := e.Teardown(); err != nil {
-							return errors.Wrapf(err, "failed to shutdown namespace")
-						}
 						return err
 					}
 					return nil
@@ -84,12 +68,11 @@ func main() {
 				Action: func(c *cli.Context) error {
 					envName := c.String("environment")
 					envFile := fmt.Sprintf("%s.json", envName)
-					cc, err := environment.LoadConfigJSON(&environment.HelmEnvironmentConfig{}, envFile)
+					cc, err := environment.LoadConfig(envFile)
 					if err != nil {
 						return err
 					}
-					log.Debug().Str("NamespaceName", cc.NamespaceName).Send()
-					e, err := environment.LoadHelmEnvironment(cc)
+					e, err := environment.LoadEnvironment(cc)
 					if err != nil {
 						return err
 					}
@@ -106,11 +89,11 @@ func main() {
 				Action: func(c *cli.Context) error {
 					envName := c.String("environment")
 					envFile := fmt.Sprintf("%s.json", envName)
-					cc, err := environment.LoadConfigJSON(&environment.HelmEnvironmentConfig{}, envFile)
+					cc, err := environment.LoadConfig(envFile)
 					if err != nil {
 						return err
 					}
-					e, err := environment.LoadHelmEnvironment(cc)
+					e, err := environment.LoadEnvironment(cc)
 					if err != nil {
 						return err
 					}
@@ -127,11 +110,11 @@ func main() {
 				Action: func(c *cli.Context) error {
 					envName := c.String("environment")
 					envFile := fmt.Sprintf("%s.json", envName)
-					cc, err := environment.LoadConfigJSON(&environment.HelmEnvironmentConfig{}, envFile)
+					cc, err := environment.LoadConfig(envFile)
 					if err != nil {
 						return err
 					}
-					e, err := environment.LoadHelmEnvironment(cc)
+					e, err := environment.LoadEnvironment(cc)
 					if err != nil {
 						return err
 					}

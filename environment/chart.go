@@ -29,14 +29,16 @@ const (
 	MaxPort = 50000
 	// MinPort min port value for forwarding
 	MinPort = 20000
+	// AppEnumerationLabelKey label used to enumerate instances of the same app to ease access
+	AppEnumerationLabelKey = "app"
 )
 
 // ChartSettings chart settings config
 type ChartSettings struct {
-	ReleaseName string                     `json:"release_name"`
-	Path        string                     `json:"path"`
-	Values      map[string]interface{}     `json:"values"`
-	PodsInfo    map[string]*ConnectionInfo `json:"pods_info"`
+	ReleaseName    string                     `json:"release_name"`
+	Path           string                     `json:"path"`
+	Values         map[string]interface{}     `json:"values"`
+	ConnectionInfo map[string]*ConnectionInfo `json:"pods_info"`
 }
 
 // HelmChart helm chart structure
@@ -63,30 +65,53 @@ func NewHelmChart(env *Environment, cfg *ChartSettings) (*HelmChart, error) {
 	return hc, nil
 }
 
+func (hc *HelmChart) makePortRules(connectionInfo *ConnectionInfo) ([]string, error) {
+	rules := make([]string, 0)
+	for portName, port := range connectionInfo.Ports {
+		freePort := rand.Intn(MaxPort-MinPort) + MinPort
+		if portName == "" {
+			return nil, fmt.Errorf("port %d must be named in helm chart", port)
+		}
+		connectionInfo.LocalPorts[portName] = freePort
+		rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
+	}
+	return rules, nil
+}
+
+func (hc *HelmChart) connectPod(connectionInfo *ConnectionInfo, rules []string) error {
+	if len(rules) == 0 {
+		return nil
+	}
+	if !hc.env.Config.Persistent {
+		if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
+			return err
+		}
+		return nil
+	}
+	pid, err := hc.env.runProcessForwarder(connectionInfo.PodName, rules)
+	if err != nil {
+		return err
+	}
+	connectionInfo.ForwarderPID = pid
+	return nil
+}
+
 // Connect connects to all exposed containerPorts, forwards them to local
 func (hc *HelmChart) Connect() error {
-	for _, connectionInfo := range hc.settings.PodsInfo {
-		rules := make([]string, 0)
-		for portName, port := range connectionInfo.Ports {
-			freePort := rand.Intn(MaxPort-MinPort) + MinPort
-			if portName == "" {
-				return fmt.Errorf("port %d must be named in helm chart", port)
-			}
-			connectionInfo.LocalPorts[portName] = freePort
-			rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
+	for _, connectionInfo := range hc.settings.ConnectionInfo {
+		if connectionInfo.ForwarderPID != 0 {
+			log.Info().
+				Str("Pod", connectionInfo.PodName).
+				Interface("Ports", connectionInfo.LocalPorts).
+				Msg("Already connected")
+			continue
 		}
-		if len(rules) > 0 {
-			if hc.env.Config.Persistent {
-				pid, err := hc.env.runProcessForwarder(connectionInfo.PodName, rules)
-				if err != nil {
-					return err
-				}
-				connectionInfo.ForwarderPID = pid
-			} else {
-				if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
-					return err
-				}
-			}
+		rules, err := hc.makePortRules(connectionInfo)
+		if err != nil {
+			return err
+		}
+		if err := hc.connectPod(connectionInfo, rules); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -188,10 +213,10 @@ func (hc *HelmChart) addInstanceLabel(app string) error {
 func (hc *HelmChart) updateChartSettings() error {
 	for _, p := range hc.podsList.Items {
 		for _, c := range p.Spec.Containers {
-			if hc.settings.PodsInfo == nil {
-				hc.settings.PodsInfo = make(map[string]*ConnectionInfo)
+			if hc.settings.ConnectionInfo == nil {
+				hc.settings.ConnectionInfo = make(map[string]*ConnectionInfo)
 			}
-			app, ok := p.Labels["app"]
+			app, ok := p.Labels[AppEnumerationLabelKey]
 			if !ok {
 				log.Warn().Str("Container", c.Name).Msg("App label not found")
 			}
@@ -204,14 +229,14 @@ func (hc *HelmChart) updateChartSettings() error {
 				Interface("PodPorts", c.Ports).
 				Msg("Container info")
 			instanceKey := fmt.Sprintf("%s:%s:%s", app, instance, c.Name)
-			if _, ok := hc.settings.PodsInfo[instanceKey]; ok {
+			if _, ok := hc.settings.ConnectionInfo[instanceKey]; ok {
 				return fmt.Errorf("ambiguous instance key: %s", instanceKey)
 			}
 			pm := map[string]int{}
 			for _, port := range c.Ports {
 				pm[port.Name] = int(port.ContainerPort)
 			}
-			hc.settings.PodsInfo[instanceKey] = &ConnectionInfo{
+			hc.settings.ConnectionInfo[instanceKey] = &ConnectionInfo{
 				PodName:    p.Name,
 				PodIP:      p.Status.PodIP,
 				Ports:      pm,
@@ -223,7 +248,7 @@ func (hc *HelmChart) updateChartSettings() error {
 }
 
 func (hc *HelmChart) enumerateApps() error {
-	apps, err := hc.uniqueAppLabels("app")
+	apps, err := hc.uniqueAppLabels(AppEnumerationLabelKey)
 	if err != nil {
 		return err
 	}
@@ -246,7 +271,7 @@ func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 		return nil, errors.Wrapf(err, "no labels with selector %s found for enumeration", selector)
 	}
 	for _, p := range podList.Items {
-		appLabel := p.Labels["app"]
+		appLabel := p.Labels[AppEnumerationLabelKey]
 		if _, ok := isUnique[appLabel]; !ok {
 			uniqueLabels = append(uniqueLabels, appLabel)
 		}

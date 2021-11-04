@@ -5,9 +5,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	uuid "github.com/satori/go.uuid"
+	"github.com/smartcontractkit/helmenv/environment"
+	"github.com/smartcontractkit/helmenv/tools"
 	"github.com/stretchr/testify/require"
-	"helmenv/environment"
-	"helmenv/tools"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,7 +24,7 @@ func teardown(t *testing.T, e *environment.Environment) {
 
 func TestDeployAll(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
-	e, err := environment.NewEnvironment(&environment.HelmEnvironmentConfig{
+	e, err := environment.NewEnvironment(&environment.Config{
 		Name: envName,
 	})
 	defer teardown(t, e)
@@ -49,18 +49,18 @@ func TestDeployAll(t *testing.T) {
 	err = e.Connect()
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].PodsInfo["geth:0:geth-network"].Ports["ws-rpc"])
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].PodsInfo["geth:0:geth-network"].LocalPorts["ws-rpc"])
+	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth:0:geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth:0:geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:node"].Ports["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:chainlink-db"].Ports["postgres"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:chainlink-db"].LocalPorts["postgres"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:node"].Ports["access"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:node"].LocalPorts["access"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:chainlink-db"].LocalPorts["postgres"])
 }
 
 func TestMultipleChartsSeparate(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
-	e, err := environment.NewEnvironment(&environment.HelmEnvironmentConfig{
+	e, err := environment.NewEnvironment(&environment.Config{
 		Name: envName,
 	})
 	defer teardown(t, e)
@@ -88,11 +88,11 @@ func TestMultipleChartsSeparate(t *testing.T) {
 	err = e.Charts["chainlink"].Connect()
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].PodsInfo["geth:0:geth-network"].Ports["ws-rpc"])
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].PodsInfo["geth:0:geth-network"].LocalPorts["ws-rpc"])
+	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth:0:geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth:0:geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:node"].Ports["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:chainlink-db"].Ports["postgres"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].PodsInfo["chainlink-node:0:chainlink-db"].LocalPorts["postgres"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:node"].Ports["access"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:node"].LocalPorts["access"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node:0:chainlink-db"].LocalPorts["postgres"])
 }

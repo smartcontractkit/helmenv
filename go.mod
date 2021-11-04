@@ -1,4 +1,4 @@
-module helmenv
+module github.com/smartcontractkit/helmenv
 
 go 1.17
 

@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-// DumpConfigJSON dumps arbitrary JSON to a file
-func DumpConfigJSON(cfg *HelmEnvironmentConfig, path string) error {
+// DumpConfig dumps config to a file
+func DumpConfig(cfg *Config, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -22,12 +22,13 @@ func DumpConfigJSON(cfg *HelmEnvironmentConfig, path string) error {
 	return nil
 }
 
-// LoadConfigJSON loads arbitrary JSON from a file
-func LoadConfigJSON(cfg *HelmEnvironmentConfig, path string) (*HelmEnvironmentConfig, error) {
+// LoadConfig loads config from a file
+func LoadConfig(path string) (*Config, error) {
 	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	var cfg *Config
 	if err := json.Unmarshal(d, &cfg); err != nil {
 		return nil, err
 	}
