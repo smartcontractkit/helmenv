@@ -1,5 +1,9 @@
 #### Helm environment
-Thin wrapper for Helm to help expose different environments for local usage to help you run tests locally against multiple envs and programmatically in ephemeral envs at the same time with a nice API
+Thin wrapper for Helm to help you interact with `k8s` environments
+
+#### Goals
+- Create a thin wrapper around deployments that works almost like `Helm subcharts` to compose test environments, with only small code part that helps you to configure your env more easily than writing `hooks`
+- Ability to use in both ephemeral deployments for CI as a lib and when creating standalone environment as a CLI
 
 #### CLI usage
 Install
@@ -13,35 +17,40 @@ envcli -h
 
 Create new environment with a preset
 ```
-envcli -n env-1 n -p chainlink
+envcli -p examples/standalone/chainlink-example-preset n
 ```
-You'll see config create `env-1.json`
+You'll see all deployed charts info are now added to a preset `yaml` file
 
 Now you can connect
 ```
-envcli -n env-1 c
+envcli -p examples/standalone/chainlink-example-preset c
 ```
 You can see all forwarded ports and get it by name from config now
 
-You can connect to all envs for which you have config
-
 To disconnect use
 ```
-envcli -n env-1 dc
+envcli -p examples/standalone/chainlink-example-preset dc
 ```
 To remove env use
 ```
-envcli -n env-1 rm
+envcli -p examples/standalone/chainlink-example-preset rm
 ```
 
 #### Usage as a library
 Have a look at tests in `environment/environment_test.go`
 
 #### Spinning up your custom preset
-If you want a custom preset that you can use only in your repo have a look at `examples`
+If you want a custom preset that you can use only in your repo have a look at `examples/programmatic`
 
 #### Charts requirements
 Your applications must have `app: *any_app_name*` label, see examples in `charts`
+
+All ports must have names, example:
+```
+ports:
+    - name: http-rpc
+      containerPort: 8544
+```
 
 TODO:
 - [x] Deploy a chart
@@ -53,7 +62,7 @@ TODO:
 - [x] Test port forwarder forking on OS X
 - [ ] Test port forwarder forking on Linux
 - [ ] More tests with a different charts (services/dns) to check port forwarding
-- [ ] Find a way to convert k8s related config to something that devs can use with local deployment
+- [x] Test config interactions and overrides for viper and Helm values
 
 Presets:
 - [x] Chainlink <-> ETH preset

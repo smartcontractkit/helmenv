@@ -1,7 +1,8 @@
 package environment
 
 import (
-	"encoding/json"
+	"fmt"
+	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
 )
@@ -12,7 +13,7 @@ func DumpConfig(cfg *Config, path string) error {
 	if err != nil {
 		return err
 	}
-	d, err := json.Marshal(cfg)
+	d, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err
 	}
@@ -24,12 +25,12 @@ func DumpConfig(cfg *Config, path string) error {
 
 // LoadConfig loads config from a file
 func LoadConfig(path string) (*Config, error) {
-	d, err := ioutil.ReadFile(path)
+	d, err := ioutil.ReadFile(fmt.Sprintf("%s.yaml", path))
 	if err != nil {
 		return nil, err
 	}
 	var cfg *Config
-	if err := json.Unmarshal(d, &cfg); err != nil {
+	if err := yaml.Unmarshal(d, &cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

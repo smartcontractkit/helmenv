@@ -35,10 +35,10 @@ const (
 
 // ChartSettings chart settings config
 type ChartSettings struct {
-	ReleaseName    string                     `json:"release_name"`
-	Path           string                     `json:"path"`
-	Values         map[string]interface{}     `json:"values"`
-	ConnectionInfo map[string]*ConnectionInfo `json:"pods_info"`
+	ReleaseName    string                     `json:"release_name" mapstructure:"release_name"`
+	Path           string                     `json:"path" mapstructure:"path"`
+	OverrideValues map[string]interface{}     `json:"values" mapstructure:"values"`
+	ConnectionInfo map[string]*ConnectionInfo `json:"pods_info" mapstructure:"pods_info"`
 }
 
 // HelmChart helm chart structure
@@ -82,7 +82,7 @@ func (hc *HelmChart) connectPod(connectionInfo *ConnectionInfo, rules []string) 
 	if len(rules) == 0 {
 		return nil
 	}
-	if !hc.env.Config.Persistent {
+	if !hc.env.Config.PersistentConnection {
 		if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
 			return err
 		}
@@ -153,16 +153,18 @@ func (hc *HelmChart) deployChart() error {
 	log.Info().Str("Path", hc.settings.Path).
 		Str("Release", hc.settings.ReleaseName).
 		Str("Namespace", hc.NamespaceName).
+		Interface("Override values", hc.settings.OverrideValues).
 		Msg("Installing Helm chart")
 	chart, err := loader.Load(hc.settings.Path)
 	if err != nil {
 		return err
 	}
 
-	chart.Values, err = chartutil.CoalesceValues(chart, hc.settings.Values)
+	chart.Values, err = chartutil.CoalesceValues(chart, hc.settings.OverrideValues)
 	if err != nil {
 		return err
 	}
+	log.Debug().Interface("Values", chart.Values).Msg("Merged chart values")
 
 	install := action.NewInstall(hc.actionConfig)
 	install.Namespace = hc.NamespaceName
@@ -228,7 +230,7 @@ func (hc *HelmChart) updateChartSettings() error {
 				Str("Container", c.Name).
 				Interface("PodPorts", c.Ports).
 				Msg("Container info")
-			instanceKey := fmt.Sprintf("%s:%s:%s", app, instance, c.Name)
+			instanceKey := fmt.Sprintf("%s_%s_%s", app, instance, c.Name)
 			if _, ok := hc.settings.ConnectionInfo[instanceKey]; ok {
 				return fmt.Errorf("ambiguous instance key: %s", instanceKey)
 			}

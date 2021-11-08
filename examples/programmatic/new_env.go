@@ -13,9 +13,9 @@ func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
-func main() {
+func deployMyEphemeralEnv() (*environment.Environment, error) {
 	e, err := environment.NewEnvironment(&environment.Config{
-		Persistent: true,
+		Persistent: false,
 		Name:       "my-env",
 	})
 	if err != nil {
@@ -25,18 +25,16 @@ func main() {
 		panic(err)
 	}
 	if err := e.AddChart(&environment.ChartSettings{
-		ReleaseName: "geth",
-		Path:        filepath.Join(tools.ChartsRoot, "geth"),
-		Values:      nil,
+		ReleaseName:    "geth",
+		Path:           filepath.Join(tools.ChartsRoot, "geth"),
+		OverrideValues: nil,
 	}); err != nil {
 		panic(err)
 	}
 	if err := e.AddChart(&environment.ChartSettings{
-		ReleaseName: "chainlink",
-		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
-		Values: map[string]interface{}{
-			"replicaCount": 3,
-		},
+		ReleaseName:    "chainlink",
+		Path:           filepath.Join(tools.ChartsRoot, "chainlink"),
+		OverrideValues: nil,
 	}); err != nil {
 		panic(err)
 	}
@@ -44,6 +42,23 @@ func main() {
 		if err := e.Teardown(); err != nil {
 			panic(err)
 		}
+		panic(err)
+	}
+	return e, nil
+}
+
+func main() {
+	e, err := deployMyEphemeralEnv()
+	if err != nil {
+		panic(err)
+	}
+	if err := e.Connect(); err != nil {
+		panic(err)
+	}
+	log.Info().
+		Int("Port", e.Config.ChartsInfo["geth"].ConnectionInfo["geth_0_geth-network"].Ports["ws-rpc"]).
+		Msg("Connected")
+	if err := e.Teardown(); err != nil {
 		panic(err)
 	}
 }

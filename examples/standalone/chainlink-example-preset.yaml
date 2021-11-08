@@ -1,0 +1,13 @@
+charts_info: null
+kube_ctl_process_name: /usr/local/bin/kubectl
+name: another-chainlink-env
+namespace_name: ""
+persistent: true
+persistent_connection: true
+preset:
+  filename: examples/standalone/chainlink-example-preset
+  name: chainlink-env
+  type: chainlink-cluster
+  values:
+    chainlink:
+      replicas: 2

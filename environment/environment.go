@@ -28,22 +28,31 @@ const (
 
 // ConnectionInfo info about connected pod ports
 type ConnectionInfo struct {
-	PodName      string         `json:"pod_name"`
-	ForwarderPID int            `json:"forwarder_pid"`
-	PodIP        string         `json:"pod_ip"`
-	Ports        map[string]int `json:"ports"`
-	LocalPorts   map[string]int `json:"local_port"`
+	PodName      string         `json:"pod_name" mapstructure:"pod_name"`
+	ForwarderPID int            `json:"forwarder_pid" mapstructure:"forwarder_pid"`
+	PodIP        string         `json:"pod_ip" mapstructure:"pod_ip"`
+	Ports        map[string]int `json:"ports" mapstructure:"ports"`
+	LocalPorts   map[string]int `json:"local_port" mapstructure:"local_port"`
 }
 
 // Config environment config with all charts info,
 // it is used both in runtime and can be persistent in JSON
 type Config struct {
-	Persistent         bool                      `json:"persistent"`
-	KubeCtlProcessName string                    `json:"kube_ctl_process_name"`
-	NamespaceName      string                    `json:"namespace_name"`
-	Name               string                    `json:"name"`
-	PresetMap          map[string]interface{}    `json:"preset_map"`
-	ChartsInfo         map[string]*ChartSettings `json:"chart_settings"`
+	Persistent           bool                      `json:"persistent" mapstructure:"persistent"`
+	PersistentConnection bool                      `json:"persistent_connection" mapstructure:"persistent_connection"`
+	KubeCtlProcessName   string                    `json:"kube_ctl_process_name" mapstructure:"kube_ctl_process_name"`
+	NamespaceName        string                    `json:"namespace_name" mapstructure:"namespace_name"`
+	Name                 string                    `json:"name" mapstructure:"name"`
+	Preset               *Preset                   `json:"preset" mapstructure:"preset"`
+	ChartsInfo           map[string]*ChartSettings `json:"charts_info" mapstructure:"charts_info"`
+}
+
+// Preset is a combination of configured helm charts
+type Preset struct {
+	Name     string                 `json:"name" mapstructure:"name"`
+	Type     string                 `json:"type" mapstructure:"type"`
+	Filename string                 `json:"filename" mapstructure:"filename"`
+	Values   map[string]interface{} `json:"values" mapstructure:"values"`
 }
 
 // Environment environment build and deployed from several helm Charts
@@ -57,18 +66,28 @@ type Environment struct {
 	k8sConfig            *rest.Config
 }
 
-// NewEnvironment creates new environment from charts
-func NewEnvironment(cfg *Config) (*Environment, error) {
-	ks, kc, err := GetLocalK8sDeps()
-	if err != nil {
-		return nil, err
-	}
+func envDefaults(cfg *Config) {
 	if cfg.ChartsInfo == nil {
 		cfg.ChartsInfo = map[string]*ChartSettings{}
 	}
 	if cfg.KubeCtlProcessName == "" {
 		cfg.KubeCtlProcessName = DefaultKubeCTLProcessPath
 	}
+	if cfg.Preset == nil {
+		cfg.Preset = &Preset{
+			Name:     cfg.Name,
+			Filename: cfg.Name,
+		}
+	}
+}
+
+// NewEnvironment creates new environment from charts
+func NewEnvironment(cfg *Config) (*Environment, error) {
+	ks, kc, err := GetLocalK8sDeps()
+	if err != nil {
+		return nil, err
+	}
+	envDefaults(cfg)
 	he := &Environment{
 		Config:               cfg,
 		releaseName:          cfg.Name,
@@ -157,10 +176,25 @@ func (k *Environment) Init() error {
 	return nil
 }
 
+// RemoveConfigConnectionInfo removes config connection info when environment was removed
+func (k *Environment) RemoveConfigConnectionInfo() error {
+	if k.Config.Persistent {
+		k.Config.ChartsInfo = nil
+		k.Config.NamespaceName = ""
+	}
+	if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Preset.Filename)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // SyncConfig dumps config in Persistent mode
 func (k *Environment) SyncConfig() error {
 	if k.Config.Persistent {
-		if err := DumpConfig(k.Config, fmt.Sprintf("%s.json", k.releaseName)); err != nil {
+		if k.Config.Preset.Filename == "" {
+			return fmt.Errorf("no preset filename was set")
+		}
+		if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Preset.Filename)); err != nil {
 			return err
 		}
 	}
@@ -238,7 +272,11 @@ func (k *Environment) Disconnect() error {
 }
 
 // LoadEnvironment loads environment from config
-func LoadEnvironment(cfg *Config) (*Environment, error) {
+func LoadEnvironment(presetFilepath string) (*Environment, error) {
+	cfg, err := LoadConfig(presetFilepath)
+	if err != nil {
+		return nil, err
+	}
 	log.Info().
 		Interface("Settings", cfg).
 		Msg("Loading environment")
