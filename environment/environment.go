@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"fmt"
+	"github.com/smartcontractkit/helmenv/tools"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,6 +59,7 @@ type Preset struct {
 // Environment environment build and deployed from several helm Charts
 type Environment struct {
 	CLISettings          *cli.EnvSettings
+	Artifacts            *Artifacts
 	Config               *Config
 	releaseName          string
 	Charts               map[string]*HelmChart
@@ -66,28 +68,13 @@ type Environment struct {
 	k8sConfig            *rest.Config
 }
 
-func envDefaults(cfg *Config) {
-	if cfg.ChartsInfo == nil {
-		cfg.ChartsInfo = map[string]*ChartSettings{}
-	}
-	if cfg.KubeCtlProcessName == "" {
-		cfg.KubeCtlProcessName = DefaultKubeCTLProcessPath
-	}
-	if cfg.Preset == nil {
-		cfg.Preset = &Preset{
-			Name:     cfg.Name,
-			Filename: cfg.Name,
-		}
-	}
-}
-
 // NewEnvironment creates new environment from charts
 func NewEnvironment(cfg *Config) (*Environment, error) {
 	ks, kc, err := GetLocalK8sDeps()
 	if err != nil {
 		return nil, err
 	}
-	envDefaults(cfg)
+	cfg.SetDefaults()
 	he := &Environment{
 		Config:               cfg,
 		releaseName:          cfg.Name,
@@ -173,6 +160,11 @@ func (k *Environment) Init() error {
 	if err := k.configureHelm(); err != nil {
 		return err
 	}
+	a, err := NewArtifacts(tools.ProjectRoot, k)
+	if err != nil {
+		return err
+	}
+	k.Artifacts = a
 	return nil
 }
 
@@ -287,6 +279,11 @@ func LoadEnvironment(presetFilepath string) (*Environment, error) {
 	if err := he.configureHelm(); err != nil {
 		return nil, err
 	}
+	a, err := NewArtifacts(tools.ProjectRoot, he)
+	if err != nil {
+		return nil, err
+	}
+	he.Artifacts = a
 	for _, set := range he.Config.ChartsInfo {
 		hc, err := NewHelmChart(he, set)
 		if err != nil {

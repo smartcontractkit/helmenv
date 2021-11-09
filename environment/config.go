@@ -7,6 +7,22 @@ import (
 	"os"
 )
 
+// SetDefaults set default values for config
+func (cfg *Config) SetDefaults() {
+	if cfg.ChartsInfo == nil {
+		cfg.ChartsInfo = map[string]*ChartSettings{}
+	}
+	if cfg.KubeCtlProcessName == "" {
+		cfg.KubeCtlProcessName = DefaultKubeCTLProcessPath
+	}
+	if cfg.Preset == nil {
+		cfg.Preset = &Preset{
+			Name:     cfg.Name,
+			Filename: cfg.Name,
+		}
+	}
+}
+
 // DumpConfig dumps config to a file
 func DumpConfig(cfg *Config, path string) error {
 	f, err := os.Create(path)

@@ -31,6 +31,8 @@ const (
 	MinPort = 20000
 	// AppEnumerationLabelKey label used to enumerate instances of the same app to ease access
 	AppEnumerationLabelKey = "app"
+	// InstanceEnumerationLabelKey additional label to enumerate app instances
+	InstanceEnumerationLabelKey = "instance"
 )
 
 // ChartSettings chart settings config
@@ -222,7 +224,7 @@ func (hc *HelmChart) updateChartSettings() error {
 			if !ok {
 				log.Warn().Str("Container", c.Name).Msg("App label not found")
 			}
-			instance := p.Labels["instance"]
+			instance := p.Labels[InstanceEnumerationLabelKey]
 			if !ok {
 				log.Warn().Str("Container", c.Name).Msg("Instance label not found")
 			}

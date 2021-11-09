@@ -27,6 +27,11 @@ envcli -p examples/standalone/chainlink-example-preset c
 ```
 You can see all forwarded ports and get it by name from config now
 
+Dump all the logs and postgres sqls
+```
+envcli -p examples/standalone/chainlink-example-preset d -a test_dump
+```
+
 To disconnect use
 ```
 envcli -p examples/standalone/chainlink-example-preset dc

@@ -96,6 +96,31 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "dump",
+				Aliases: []string{"d"},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "artifacts",
+						Aliases:  []string{"a"},
+						Usage:    "artifacts dir to store logs",
+						Required: true,
+					},
+				},
+				Usage: "dump all the logs from the environment",
+				Action: func(c *cli.Context) error {
+					presetName := c.String("preset")
+					artifactsDir := c.String("artifacts")
+					e, err := environment.LoadEnvironment(presetName)
+					if err != nil {
+						return err
+					}
+					if err := e.Artifacts.DumpTestResult(artifactsDir); err != nil {
+						return err
+					}
+					return nil
+				},
+			},
 		},
 	}
 	err := app.Run(os.Args)

@@ -1,5 +1,4 @@
 chainlink:
-  replicas: 1
   image:
     image: public.ecr.aws/chainlink/chainlink
     version: 0.10.14
@@ -20,4 +19,5 @@ db:
     limits:
       cpu: 1000m
       memory: 1000Mi
+replicas: 1
 
