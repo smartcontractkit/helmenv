@@ -3,10 +3,12 @@ package main
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/smartcontractkit/helmenv/chaos/experiments"
 	"github.com/smartcontractkit/helmenv/environment"
 	"github.com/smartcontractkit/helmenv/tools"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func init() {
@@ -54,9 +56,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := e.Artifacts.DumpTestResult("test_1"); err != nil {
-		if err := e.Teardown(); err != nil {
-			log.Fatal().Err(err).Send()
-		}
+	time.Sleep(10 * time.Second)
+	err = e.ApplyExperiment(&experiments.PodFailure{
+		LabelKey:   "app",
+		LabelValue: "chainlink-node",
+		Duration:   10 * time.Second,
+	})
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(10 * time.Second)
+	if err := e.Chaos.StopAll(); err != nil {
+		panic(err)
 	}
 }

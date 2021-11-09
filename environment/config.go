@@ -3,6 +3,7 @@ package environment
 import (
 	"fmt"
 	"github.com/ghodss/yaml"
+	"github.com/smartcontractkit/helmenv/chaos"
 	"io/ioutil"
 	"os"
 )
@@ -20,6 +21,9 @@ func (cfg *Config) SetDefaults() {
 			Name:     cfg.Name,
 			Filename: cfg.Name,
 		}
+	}
+	if cfg.Experiments == nil {
+		cfg.Experiments = make(map[string]*chaos.ExperimentInfo)
 	}
 }
 

@@ -5,15 +5,15 @@ charts_info:
       chainlink-node_0_chainlink-db:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.28.9
-        pod_name: chainlink-node-8488bf89d7-9tcq6
+        pod_ip: 10.13.9.62
+        pod_name: chainlink-node-8488bf89d7-5bcwd
         ports:
           postgres: 5432
       chainlink-node_0_node:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.28.9
-        pod_name: chainlink-node-8488bf89d7-9tcq6
+        pod_ip: 10.13.9.62
+        pod_name: chainlink-node-8488bf89d7-5bcwd
         ports:
           access: 6688
           p2p: 8090
@@ -21,14 +21,14 @@ charts_info:
         forwarder_pid: 0
         local_port: {}
         pod_ip: 10.13.81.17
-        pod_name: chainlink-node-8488bf89d7-vkdng
+        pod_name: chainlink-node-8488bf89d7-fl4dd
         ports:
           postgres: 5432
       chainlink-node_1_node:
         forwarder_pid: 0
         local_port: {}
         pod_ip: 10.13.81.17
-        pod_name: chainlink-node-8488bf89d7-vkdng
+        pod_name: chainlink-node-8488bf89d7-fl4dd
         ports:
           access: 6688
           p2p: 8090
@@ -41,16 +41,23 @@ charts_info:
       geth_0_geth-network:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.90.35
-        pod_name: geth-b96d7dfb6-qdhtt
+        pod_ip: 10.13.35.127
+        pod_name: geth-b96d7dfb6-xfdxk
         ports:
           http-rpc: 8544
           ws-rpc: 8546
     release_name: geth
     values: null
+experiments:
+  podchaos-75cad75b-afee-4e8a-a97a-aeb9840ede6f:
+    name: podchaos-75cad75b-afee-4e8a-a97a-aeb9840ede6f
+    resource: podchaos
+  podchaos-eba699c9-433b-481d-a89f-5ba1079e0c42:
+    name: podchaos-eba699c9-433b-481d-a89f-5ba1079e0c42
+    resource: podchaos
 kube_ctl_process_name: /usr/local/bin/kubectl
 name: another-chainlink-env
-namespace_name: another-chainlink-env-cl9kg
+namespace_name: another-chainlink-env-tn8g9
 persistent: true
 persistent_connection: true
 preset:

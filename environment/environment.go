@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"fmt"
+	"github.com/smartcontractkit/helmenv/chaos"
 	"github.com/smartcontractkit/helmenv/tools"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
@@ -39,13 +40,14 @@ type ConnectionInfo struct {
 // Config environment config with all charts info,
 // it is used both in runtime and can be persistent in JSON
 type Config struct {
-	Persistent           bool                      `json:"persistent" mapstructure:"persistent"`
-	PersistentConnection bool                      `json:"persistent_connection" mapstructure:"persistent_connection"`
-	KubeCtlProcessName   string                    `json:"kube_ctl_process_name" mapstructure:"kube_ctl_process_name"`
-	NamespaceName        string                    `json:"namespace_name" mapstructure:"namespace_name"`
-	Name                 string                    `json:"name" mapstructure:"name"`
-	Preset               *Preset                   `json:"preset" mapstructure:"preset"`
-	ChartsInfo           map[string]*ChartSettings `json:"charts_info" mapstructure:"charts_info"`
+	Persistent           bool                             `json:"persistent" mapstructure:"persistent"`
+	PersistentConnection bool                             `json:"persistent_connection" mapstructure:"persistent_connection"`
+	KubeCtlProcessName   string                           `json:"kube_ctl_process_name" mapstructure:"kube_ctl_process_name"`
+	NamespaceName        string                           `json:"namespace_name" mapstructure:"namespace_name"`
+	Name                 string                           `json:"name" mapstructure:"name"`
+	Preset               *Preset                          `json:"preset" mapstructure:"preset"`
+	ChartsInfo           map[string]*ChartSettings        `json:"charts_info" mapstructure:"charts_info"`
+	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments" mapstructure:"experiments"`
 }
 
 // Preset is a combination of configured helm charts
@@ -60,6 +62,7 @@ type Preset struct {
 type Environment struct {
 	CLISettings          *cli.EnvSettings
 	Artifacts            *Artifacts
+	Chaos                *chaos.Controller
 	Config               *Config
 	releaseName          string
 	Charts               map[string]*HelmChart
@@ -165,6 +168,14 @@ func (k *Environment) Init() error {
 		return err
 	}
 	k.Artifacts = a
+	cc, err := chaos.NewController(&chaos.Config{
+		Client:        k.k8sClient,
+		NamespaceName: k.Config.NamespaceName,
+	})
+	if err != nil {
+		return err
+	}
+	k.Chaos = cc
 	return nil
 }
 
@@ -272,6 +283,7 @@ func LoadEnvironment(presetFilepath string) (*Environment, error) {
 	log.Info().
 		Interface("Settings", cfg).
 		Msg("Loading environment")
+	cfg.SetDefaults()
 	he, err := NewEnvironment(cfg)
 	if err != nil {
 		return nil, err
@@ -284,6 +296,14 @@ func LoadEnvironment(presetFilepath string) (*Environment, error) {
 		return nil, err
 	}
 	he.Artifacts = a
+	cc, err := chaos.NewController(&chaos.Config{
+		Client:        he.k8sClient,
+		NamespaceName: cfg.NamespaceName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	he.Chaos = cc
 	for _, set := range he.Config.ChartsInfo {
 		hc, err := NewHelmChart(he, set)
 		if err != nil {
@@ -302,4 +322,49 @@ func (k *Environment) GetSecretField(namespace string, secretName string, fieldN
 		return "", err
 	}
 	return string(res.Data[fieldName]), nil
+}
+
+// StopExperimentStandalone stops experiment in a standalone env
+func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) error {
+	if err := k.Chaos.StopStandalone(expInfo); err != nil {
+		return err
+	}
+	k.Config.Experiments[expInfo.Name] = nil
+	if len(k.Config.Experiments) == 0 {
+		k.Config.Experiments = nil
+	}
+	if err := k.SyncConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ApplyExperimentStandalone applies experiment to a standalone env
+func (k *Environment) ApplyExperimentStandalone(tmplPath string) error {
+	expInfo, err := k.Chaos.RunTemplate(tmplPath)
+	if err != nil {
+		return err
+	}
+	k.Config.Experiments[expInfo.Name] = expInfo
+	if err := k.SyncConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ApplyExperiment applies experiment to an ephemeral env
+func (k *Environment) ApplyExperiment(exp chaos.Experimentable) error {
+	_, err := k.Chaos.Run(exp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// StopExperiment stops experiment in a ephemeral env
+func (k *Environment) StopExperiment(chaosName string) error {
+	if err := k.Chaos.Stop(chaosName); err != nil {
+		return err
+	}
+	return nil
 }

@@ -31,6 +31,14 @@ Dump all the logs and postgres sqls
 ```
 envcli -p examples/standalone/chainlink-example-preset d -a test_dump
 ```
+Apply some chaos from template
+```
+envcli -p examples/standalone/chainlink-example-preset ch -t *path_to_template*
+```
+Remove chaos by id
+```
+envcli -p examples/standalone/chainlink-example-preset sch -i *id_from_preset*
+```
 
 To disconnect use
 ```
