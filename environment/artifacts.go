@@ -21,6 +21,7 @@ import (
 type Artifacts struct {
 	env         *Environment
 	RootLogsDir string
+	DBName      string
 	podsClient  clientV1.PodInterface
 }
 
@@ -38,9 +39,9 @@ func NewArtifacts(rootPath string, env *Environment) (*Artifacts, error) {
 	}, nil
 }
 
-// DumpTestResult dumps all pods logs in a separate test dir
-func (a *Artifacts) DumpTestResult(testDirName string) error {
-	testDir := filepath.Join(a.RootLogsDir, testDirName)
+// DumpTestResult dumps all pods logs and db dump in a separate test dir
+func (a *Artifacts) DumpTestResult(testDir string, dbName string) error {
+	a.DBName = dbName
 	if err := mkdirIfNotExists(testDir); err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (a *Artifacts) dumpDB(pod coreV1.Pod, container coreV1.Container) (string, 
 	exportDBRequest := postRequestBase.VersionedParams(
 		&coreV1.PodExecOptions{
 			Container: container.Name,
-			Command:   []string{"/bin/sh", "-c", "pg_dump", "chainlink"},
+			Command:   []string{"/bin/sh", "-c", "pg_dump", a.DBName},
 			Stdin:     true,
 			Stdout:    true,
 			Stderr:    true,

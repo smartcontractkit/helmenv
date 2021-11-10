@@ -57,7 +57,7 @@ func main() {
 		panic(err)
 	}
 	time.Sleep(10 * time.Second)
-	err = e.ApplyExperiment(&experiments.PodFailure{
+	_, err = e.ApplyExperiment(&experiments.PodFailure{
 		LabelKey:   "app",
 		LabelValue: "chainlink-node",
 		Duration:   10 * time.Second,

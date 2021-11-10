@@ -5,30 +5,30 @@ charts_info:
       chainlink-node_0_chainlink-db:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.9.62
-        pod_name: chainlink-node-8488bf89d7-5bcwd
+        pod_ip: 10.13.45.178
+        pod_name: chainlink-node-8488bf89d7-bttgl
         ports:
           postgres: 5432
       chainlink-node_0_node:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.9.62
-        pod_name: chainlink-node-8488bf89d7-5bcwd
+        pod_ip: 10.13.45.178
+        pod_name: chainlink-node-8488bf89d7-bttgl
         ports:
           access: 6688
           p2p: 8090
       chainlink-node_1_chainlink-db:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.81.17
-        pod_name: chainlink-node-8488bf89d7-fl4dd
+        pod_ip: 10.13.104.173
+        pod_name: chainlink-node-8488bf89d7-nllhl
         ports:
           postgres: 5432
       chainlink-node_1_node:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.81.17
-        pod_name: chainlink-node-8488bf89d7-fl4dd
+        pod_ip: 10.13.104.173
+        pod_name: chainlink-node-8488bf89d7-nllhl
         ports:
           access: 6688
           p2p: 8090
@@ -41,23 +41,16 @@ charts_info:
       geth_0_geth-network:
         forwarder_pid: 0
         local_port: {}
-        pod_ip: 10.13.35.127
-        pod_name: geth-b96d7dfb6-xfdxk
+        pod_ip: 10.13.46.60
+        pod_name: geth-b96d7dfb6-wclxb
         ports:
           http-rpc: 8544
           ws-rpc: 8546
     release_name: geth
     values: null
-experiments:
-  podchaos-75cad75b-afee-4e8a-a97a-aeb9840ede6f:
-    name: podchaos-75cad75b-afee-4e8a-a97a-aeb9840ede6f
-    resource: podchaos
-  podchaos-eba699c9-433b-481d-a89f-5ba1079e0c42:
-    name: podchaos-eba699c9-433b-481d-a89f-5ba1079e0c42
-    resource: podchaos
 kube_ctl_process_name: /usr/local/bin/kubectl
 name: another-chainlink-env
-namespace_name: another-chainlink-env-tn8g9
+namespace_name: another-chainlink-env-r9kvq
 persistent: true
 persistent_connection: true
 preset:

@@ -46,8 +46,8 @@ type Config struct {
 	NamespaceName        string                           `json:"namespace_name" mapstructure:"namespace_name"`
 	Name                 string                           `json:"name" mapstructure:"name"`
 	Preset               *Preset                          `json:"preset" mapstructure:"preset"`
-	ChartsInfo           map[string]*ChartSettings        `json:"charts_info" mapstructure:"charts_info"`
-	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments" mapstructure:"experiments"`
+	ChartsInfo           map[string]*ChartSettings        `json:"charts_info,omitempty" mapstructure:"charts_info"`
+	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty" mapstructure:"experiments"`
 }
 
 // Preset is a combination of configured helm charts
@@ -322,49 +322,4 @@ func (k *Environment) GetSecretField(namespace string, secretName string, fieldN
 		return "", err
 	}
 	return string(res.Data[fieldName]), nil
-}
-
-// StopExperimentStandalone stops experiment in a standalone env
-func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) error {
-	if err := k.Chaos.StopStandalone(expInfo); err != nil {
-		return err
-	}
-	k.Config.Experiments[expInfo.Name] = nil
-	if len(k.Config.Experiments) == 0 {
-		k.Config.Experiments = nil
-	}
-	if err := k.SyncConfig(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// ApplyExperimentStandalone applies experiment to a standalone env
-func (k *Environment) ApplyExperimentStandalone(tmplPath string) error {
-	expInfo, err := k.Chaos.RunTemplate(tmplPath)
-	if err != nil {
-		return err
-	}
-	k.Config.Experiments[expInfo.Name] = expInfo
-	if err := k.SyncConfig(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// ApplyExperiment applies experiment to an ephemeral env
-func (k *Environment) ApplyExperiment(exp chaos.Experimentable) error {
-	_, err := k.Chaos.Run(exp)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// StopExperiment stops experiment in a ephemeral env
-func (k *Environment) StopExperiment(chaosName string) error {
-	if err := k.Chaos.Stop(chaosName); err != nil {
-		return err
-	}
-	return nil
 }

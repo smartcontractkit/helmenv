@@ -29,15 +29,21 @@ You can see all forwarded ports and get it by name from config now
 
 Dump all the logs and postgres sqls
 ```
-envcli -p examples/standalone/chainlink-example-preset d -a test_dump
+envcli -p chainlink-example-preset d -a test_logs -db chainlink
 ```
 Apply some chaos from template
 ```
-envcli -p examples/standalone/chainlink-example-preset ch -t *path_to_template*
+envcli -p examples/standalone/chainlink-example-preset ch a -t examples/standalone/pod-failure-tmpl.yml
 ```
+Now you can find running experiment ID in `examples/standalone/chainlink-example-preset`
+
 Remove chaos by id
 ```
-envcli -p examples/standalone/chainlink-example-preset sch -i *id_from_preset*
+envcli -p examples/standalone/chainlink-example-preset ch s -e ${chaosID}
+```
+Clear all chaos if you have multiple experiments running
+```
+envcli -p examples/standalone/chainlink-example-preset ch c
 ```
 
 To disconnect use

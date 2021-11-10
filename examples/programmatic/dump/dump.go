@@ -54,7 +54,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := e.Artifacts.DumpTestResult("test_1"); err != nil {
+	if err := e.Artifacts.DumpTestResult("test_1", "chainlink"); err != nil {
 		if err := e.Teardown(); err != nil {
 			log.Fatal().Err(err).Send()
 		}

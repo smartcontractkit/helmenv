@@ -46,8 +46,8 @@ type Config struct {
 
 // ExperimentInfo persistent experiment info
 type ExperimentInfo struct {
-	Name     string `json:"name" mapstructure:"name"`
-	Resource string `json:"resource" mapstructure:"resource"`
+	Name     string `json:"name,omitempty" mapstructure:"name"`
+	Resource string `json:"resource,omitempty" mapstructure:"resource"`
 }
 
 // NewController creates controller to run and stop chaos experiments
@@ -165,7 +165,17 @@ func (c *Controller) Run(exp Experimentable) (string, error) {
 	return payload.Name, nil
 }
 
-// StopStandalone removes experiment's entity for standalone env
+// StopAllStandalone stops all chaos experiments for a standalone env
+func (c *Controller) StopAllStandalone(expInfos map[string]*ExperimentInfo) error {
+	for _, e := range expInfos {
+		if err := c.StopStandalone(e); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// StopStandalone removes experiment's entity for a standalone env
 func (c *Controller) StopStandalone(expInfo *ExperimentInfo) error {
 	log.Info().Str("ID", expInfo.Name).Msg("Deleting chaos experiment")
 	req := c.Client.RESTClient().
