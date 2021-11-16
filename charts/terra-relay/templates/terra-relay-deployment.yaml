@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: terra-relay
+    release: {{ .Release.Name }}
+  name: terra-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: terra-relay
+      release: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: terra-relay
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - env:
+            - name: CHAIN_ID
+              value: localterra
+            - name: ETH_URL
+              value: ws://terrad:26657/websocket
+            - name: ETH_HTTP_URL
+              value: http://terrad:1317
+            - name: CLIENT_NODE_URL
+              value: {{ .Values.CLIENT_NODE_URL }}
+            - name: DATABASE_URL
+              value: "postgresql://dev:dev@postgres-relay-{{ .Values.idx }}:5432/relay_1?sslmode=disable"
+            - name: KEYSTORE_PASSWORD
+              value: "hello"
+            - name: MOCK_SERVICE
+              value: {{ .Values.MOCK_SERVICE | quote }}
+            - name: IC_ACCESSKEY
+              value: {{ .Values.IC_KEY }}
+            - name: IC_SECRET
+              value: {{ .Values.IC_SECRET }}
+            - name: CI_ACCESSKEY
+              value: {{ .Values.CI_KEY }}
+            - name: CI_SECRET
+              value: {{ .Values.CI_SECRET }}
+            - name: OCR2_P2P_LISTEN_PORT
+              value: "8090"
+            - name: MNEMONIC
+              value: {{ .Values.MNEMONIC }}
+          image: 323150190480.dkr.ecr.us-west-2.amazonaws.com/terra-ocr:latest
+          name: terra-relay
+          ports:
+            - name: relay
+              containerPort: 6688
+          resources: {}
+      restartPolicy: Always

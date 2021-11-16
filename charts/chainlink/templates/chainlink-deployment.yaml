@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chainlink-node
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: chainlink-node
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: chainlink-node
+        release: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: 'true'
+    spec:
+      volumes:
+        - name: chainlink-config-map
+          configMap:
+            name: chainlink-cm
+      containers:
+        - name: chainlink-db
+          image: postgres:11.6
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: chainlink
+            - name: POSTGRES_PASSWORD
+              value: node
+            - name: PGPASSWORD
+              value: node
+            - name: PGUSER
+              value: postgres
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 60
+            periodSeconds: 60
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 2
+            periodSeconds: 2
+          resources:
+            requests:
+              memory: {{ .Values.db.resources.requests.memory }}
+              cpu: {{ .Values.db.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.db.resources.limits.memory }}
+              cpu: {{ .Values.db.resources.limits.cpu }}
+        - name: node
+          image: {{ .Values.chainlink.image.image }}:{{ .Values.chainlink.image.version }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - node
+            - start
+            - -d
+            - -p
+            - /etc/node-secrets-volume/node-password
+            - -a
+            - /etc/node-secrets-volume/apicredentials
+            - --vrfpassword=/etc/node-secrets-volume/apicredentials
+          ports:
+            - name: access
+              containerPort: {{ .Values.chainlink.web_port }}
+            - name: p2p
+              containerPort: {{ .Values.chainlink.p2p_port }}
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
+            - name: DATABASE_NAME
+              value: chainlink
+            - name: ETH_URL
+              value: ws://geth:8546
+            - name: ETH_CHAIN_ID
+              value: "1337"
+            - name: ALLOW_ORIGINS
+              value: '*'
+            - name: CHAINLINK_DEV
+              value: "true"
+            - name: ETH_DISABLED
+              value: "false"
+            - name: FEATURE_EXTERNAL_INITIATORS
+              value: "false"
+            - name: CHAINLINK_PGPASSWORD
+              value: node
+            - name: CHAINLINK_PORT
+              value: "6688"
+            - name: CHAINLINK_TLS_PORT
+              value: "0"
+            - name: DEFAULT_HTTP_ALLOW_UNRESTRICTED_NETWORK_ACCESS
+              value: "true"
+            - name: ENABLE_BULLETPROOF_TX_MANAGER
+              value: "true"
+            - name: FEATURE_OFFCHAIN_REPORTING
+              value: "true"
+            - name: JSON_CONSOLE
+              value: "false"
+            - name: LOG_LEVEL
+              value: debug
+            - name: MAX_EXPORT_HTML_THREADS
+              value: "2"
+            - name: MINIMUM_CONTRACT_PAYMENT_LINK_JUELS
+              value: "0"
+            - name: OCR_TRACE_LOGGING
+              value: "true"
+            - name: P2P_LISTEN_IP
+              value: 0.0.0.0
+            - name: P2P_LISTEN_PORT
+              value: "6690"
+            - name: ROOT
+              value: ./clroot
+            - name: SECURE_COOKIES
+              value: "false"
+            - name: ETH_MAX_IN_FLIGHT_TRANSACTIONS
+              value: "5000"
+            - name: KEEPER_DEFAULT_TRANSACTION_QUEUE_DEPTH
+              value: "1"
+            - name: KEEPER_REGISTRY_SYNC_INTERVAL
+              value: "5s"
+            - name: KEEPER_MINIMUM_REQUIRED_CONFIRMATIONS
+              value: "1"
+            - name: KEEPER_REGISTRY_PERFORM_GAS_OVERHEAD
+              value: "150000"
+          volumeMounts:
+            - name: chainlink-config-map
+              mountPath: /etc/node-secrets-volume/
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.chainlink.web_port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.chainlink.web_port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: {{ .Values.chainlink.resources.requests.memory }}
+              cpu: {{ .Values.chainlink.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.chainlink.resources.limits.memory }}
+              cpu: {{ .Values.chainlink.resources.limits.cpu }}

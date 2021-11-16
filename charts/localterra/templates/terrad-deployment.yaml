@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: terrad
+    release: {{ .Release.Name }}
+  name: terrad
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: terrad
+      release: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: terrad
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - args:
+            - terrad
+            - start
+          image: terramoney/localterra-core:bombay
+          name: terrad
+          ports:
+            - name: tendermint
+              containerPort: 26657
+            - name: lcd
+              containerPort: 1317
+            - name: tendermint-grpc
+              containerPort: 9090
+            - name: web-grpc
+              containerPort: 9091
+          resources: {}
+          volumeMounts:
+            - mountPath: /root/.terra/config
+              name: terrad-cm0
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: terrad-cm0
+          name: terrad-cm0
