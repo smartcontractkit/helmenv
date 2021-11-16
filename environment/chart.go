@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -137,11 +139,24 @@ func (hc *HelmChart) Deploy() error {
 }
 
 func (hc *HelmChart) initAction() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	// TODO: So, this is annoying, and not really all that important, I SHOULD be able to just use our K8sConfig function
+	// and pass that in as our config, but K8s has like 10 different config types, all of which don't talk to each other,
+	// and this wants an interface, instead of the rest config that we use everywhere else. Creating such an interface is
+	// also a huge hassle and... well anyway, if you've got some time to burn to make this more sensical, I hope you like
+	// digging into K8s code with sparse to no docs.
+	kubeConfigPath := filepath.Join(homeDir, DefaultK8sConfigPath)
+	if len(os.Getenv("KUBECONFIG")) > 0 {
+		kubeConfigPath = os.Getenv("KUBECONFIG")
+	}
 	hc.actionConfig = &action.Configuration{}
 	if err := hc.actionConfig.Init(
-		hc.env.CLISettings.RESTClientGetter(),
+		kube.GetConfig(kubeConfigPath, "", hc.NamespaceName),
 		hc.NamespaceName,
-		"configmap",
+		os.Getenv("HELM_DRIVER"),
 		func(format string, v ...interface{}) {
 			log.Debug().Str("LogType", "Helm").Msg(fmt.Sprintf(format, v...))
 		}); err != nil {
