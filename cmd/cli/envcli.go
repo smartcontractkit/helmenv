@@ -51,10 +51,13 @@ func main() {
 				Aliases: []string{"c"},
 				Usage:   "connects to selected environment",
 				Action: func(c *cli.Context) error {
-					presetName := c.String("preset")
-					e, err := environment.LoadEnvironment(presetName)
+					presetPath := c.String("preset")
+					e, err := environment.LoadEnvironment(presetPath)
 					if err != nil {
 						return err
+					}
+					if !e.Config.PersistentConnection {
+						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
 					}
 					if err := e.Connect(); err != nil {
 						return err
@@ -71,6 +74,9 @@ func main() {
 					e, err := environment.LoadEnvironment(presetName)
 					if err != nil {
 						return err
+					}
+					if !e.Config.PersistentConnection {
+						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
 					}
 					if err := e.Disconnect(); err != nil {
 						return err

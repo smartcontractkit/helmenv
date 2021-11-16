@@ -368,7 +368,6 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 		}
 	}()
 
-	log.Debug().Str("Pod", podName).Msg("Waiting on podsPortsInfo forwarded forwardingRuleStrings to be ready")
 	<-readyChan
 	if len(errOut.String()) > 0 {
 		return fmt.Errorf("error on forwarding k8s port: %v", errOut.String())

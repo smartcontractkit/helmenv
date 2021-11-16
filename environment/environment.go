@@ -40,14 +40,16 @@ type ConnectionInfo struct {
 // Config environment config with all charts info,
 // it is used both in runtime and can be persistent in JSON
 type Config struct {
+	Deployed             bool                             `json:"deployed" mapstructure:"deployed"`
 	Persistent           bool                             `json:"persistent" mapstructure:"persistent"`
 	PersistentConnection bool                             `json:"persistent_connection" mapstructure:"persistent_connection"`
 	KubeCtlProcessName   string                           `json:"kube_ctl_process_name" mapstructure:"kube_ctl_process_name"`
-	NamespaceName        string                           `json:"namespace_name" mapstructure:"namespace_name"`
+	NamespaceName        string                           `json:"namespace_name,omitempty" mapstructure:"namespace_name"`
 	Name                 string                           `json:"name" mapstructure:"name"`
 	Preset               *Preset                          `json:"preset" mapstructure:"preset"`
 	ChartsInfo           map[string]*ChartSettings        `json:"charts_info,omitempty" mapstructure:"charts_info"`
 	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty" mapstructure:"experiments"`
+	NetworksURLs         map[string]map[string][]string   `json:"urls" mapstructure:"urls"`
 }
 
 // Preset is a combination of configured helm charts
@@ -69,6 +71,7 @@ type Environment struct {
 	chartsDeploySequence []*HelmChart
 	k8sClient            *kubernetes.Clientset
 	k8sConfig            *rest.Config
+	URLsFunc             func(e *Config) error
 }
 
 // NewEnvironment creates new environment from charts
@@ -136,6 +139,10 @@ func (k *Environment) Teardown() error {
 		}
 	}
 	if err := k.removeNamespace(); err != nil {
+		return err
+	}
+	k.Config.Deployed = false
+	if err := k.SyncConfig(); err != nil {
 		return err
 	}
 	return nil
@@ -208,8 +215,13 @@ func (k *Environment) SyncConfig() error {
 func (k *Environment) DeployAll() error {
 	for _, c := range k.chartsDeploySequence {
 		if err := c.Deploy(); err != nil {
+			log.Error().Err(err).Send()
 			return err
 		}
+	}
+	k.Config.Deployed = true
+	if err := k.Config.setURLs(); err != nil {
+		return err
 	}
 	if err := k.SyncConfig(); err != nil {
 		return err
@@ -246,6 +258,9 @@ func (k *Environment) Connect() error {
 			return err
 		}
 	}
+	if err := k.Config.setURLs(); err != nil {
+		return err
+	}
 	if err := k.SyncConfig(); err != nil {
 		return err
 	}
@@ -268,8 +283,25 @@ func (k *Environment) Disconnect() error {
 			ci.LocalPorts = make(map[string]int)
 		}
 	}
+	if err := k.Config.setURLs(); err != nil {
+		return err
+	}
 	if err := k.SyncConfig(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (cfg *Config) setURLs() error {
+	switch cfg.Preset.Type {
+	case "chainlink-ccip":
+		if err := cfg.ccipURLs(); err != nil {
+			return err
+		}
+	case "chainlink-cluster":
+		if err := cfg.chainlinkClusterURLs(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -280,10 +312,10 @@ func LoadEnvironment(presetFilepath string) (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg.SetDefaults()
 	log.Info().
 		Interface("Settings", cfg).
 		Msg("Loading environment")
-	cfg.SetDefaults()
 	he, err := NewEnvironment(cfg)
 	if err != nil {
 		return nil, err

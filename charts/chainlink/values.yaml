@@ -6,18 +6,18 @@ chainlink:
   p2p_port: 8090
   resources:
     requests:
-      cpu: 1000m
-      memory: 1000Mi
+      cpu: 300m
+      memory: 768Mi
     limits:
-      cpu: 1000m
-      memory: 1000Mi
+      cpu: 450m
+      memory: 1024Mi
 db:
   resources:
     requests:
-      cpu: 1000m
-      memory: 1000Mi
+      cpu: 200m
+      memory: 512Mi
     limits:
-      cpu: 1000m
-      memory: 1000Mi
+      cpu: 350m
+      memory: 1024Mi
 replicas: 1
 

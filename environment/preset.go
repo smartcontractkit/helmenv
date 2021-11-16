@@ -44,13 +44,71 @@ func NewEnvironmentFromPreset(presetFilepath string) (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.Preset.Filename = presetFilepath
+	fp, err := filepath.Abs(presetFilepath)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Preset.Filename = fp
+	if cfg.Persistent && cfg.Deployed {
+		return LoadEnvironment(presetFilepath)
+	}
 	switch cfg.Preset.Type {
 	case "chainlink-cluster":
 		return NewChainlinkEnv(cfg)
+	case "chainlink-reorg":
+		return NewChainlinkReorg(cfg)
+	case "chainlink-ccip":
+		return NewCCIPChainlink(cfg)
 	default:
 		return nil, fmt.Errorf("no suitable preset found: %s", cfg.Preset.Name)
 	}
+}
+
+// NewCCIPChainlink create new CCIP Chainlink environment preset
+func NewCCIPChainlink(cfg *Config) (*Environment, error) {
+	e, err := NewEnvironment(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := e.Init(); err != nil {
+		return nil, err
+	}
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    "localterra",
+		Path:           filepath.Join(tools.ChartsRoot, "localterra"),
+		OverrideValues: nil,
+	}); err != nil {
+		return nil, err
+	}
+	gethReleaseName := "geth-reorg"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    gethReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
+		OverrideValues: nil,
+	}); err != nil {
+		return nil, err
+	}
+	chainlinkReleaseName := "chainlink"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    chainlinkReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, chainlinkReleaseName),
+		OverrideValues: cfg.Preset.Values[chainlinkReleaseName].(map[string]interface{}),
+	}); err != nil {
+		return nil, err
+	}
+	if err := e.DeployAll(); err != nil {
+		if err := e.Teardown(); err != nil {
+			return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		}
+		return nil, err
+	}
+	if err := cfg.ccipURLs(); err != nil {
+		return nil, err
+	}
+	if err := e.SyncConfig(); err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 // NewTerraChainlink new chainlink env with LocalTerra blockchain
@@ -95,8 +153,8 @@ func NewTerraChainlink(cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-// NewChainlinkEnv creates new chainlink environment
-func NewChainlinkEnv(cfg *Config) (*Environment, error) {
+// NewChainlinkReorg creates new chainlink reorg environment
+func NewChainlinkReorg(cfg *Config) (*Environment, error) {
 	e, err := NewEnvironment(cfg)
 	if err != nil {
 		return nil, err
@@ -104,7 +162,7 @@ func NewChainlinkEnv(cfg *Config) (*Environment, error) {
 	if err := e.Init(); err != nil {
 		return nil, err
 	}
-	gethReleaseName := "geth"
+	gethReleaseName := "geth-reorg"
 	if err := e.AddChart(&ChartSettings{
 		ReleaseName:    gethReleaseName,
 		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
@@ -124,6 +182,62 @@ func NewChainlinkEnv(cfg *Config) (*Environment, error) {
 		if err := e.Teardown(); err != nil {
 			return nil, errors.Wrapf(err, "failed to shutdown namespace")
 		}
+		return nil, err
+	}
+	return e, nil
+}
+
+// NewChainlinkEnv creates new chainlink environment
+func NewChainlinkEnv(cfg *Config) (*Environment, error) {
+	e, err := NewEnvironment(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := e.Init(); err != nil {
+		return nil, err
+	}
+	gethReleaseName := "geth"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    gethReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
+		OverrideValues: nil,
+	}); err != nil {
+		return nil, err
+	}
+	mockServerCfgReleaseName := "mockserver-config"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    mockServerCfgReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, mockServerCfgReleaseName),
+		OverrideValues: nil,
+	}); err != nil {
+		return nil, err
+	}
+	mockServerReleaseName := "mockserver"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    mockServerReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, mockServerReleaseName),
+		OverrideValues: nil,
+	}); err != nil {
+		return nil, err
+	}
+	chainlinkReleaseName := "chainlink"
+	if err := e.AddChart(&ChartSettings{
+		ReleaseName:    chainlinkReleaseName,
+		Path:           filepath.Join(tools.ChartsRoot, chainlinkReleaseName),
+		OverrideValues: cfg.Preset.Values[chainlinkReleaseName].(map[string]interface{}),
+	}); err != nil {
+		return nil, err
+	}
+	if err := e.DeployAll(); err != nil {
+		if err := e.Teardown(); err != nil {
+			return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		}
+		return nil, err
+	}
+	if err := cfg.chainlinkClusterURLs(); err != nil {
+		return nil, err
+	}
+	if err := e.SyncConfig(); err != nil {
 		return nil, err
 	}
 	return e, nil
