@@ -35,6 +35,7 @@ func LoadPresetConfig(cfgPath string) (*Config, error) {
 
 	var cfg *Config
 	err := v.Unmarshal(&cfg)
+	log.Debug().Interface("Config", cfg).Msg("Preset config")
 	return cfg, err
 }
 

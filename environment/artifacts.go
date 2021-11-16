@@ -180,7 +180,7 @@ func (a *Artifacts) writePodLogs(pod coreV1.Pod, appDir string) error {
 
 func mkdirIfNotExists(dirName string) error {
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
-		if err = os.Mkdir(dirName, 0755); err != nil {
+		if err = os.Mkdir(dirName, 0664); err != nil {
 			return errors.Wrapf(err, "failed to create directory: %s", dirName)
 		}
 	}
