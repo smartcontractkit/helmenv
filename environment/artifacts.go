@@ -19,23 +19,17 @@ import (
 
 // Artifacts is an artifacts dumping structure that copies logs and database dumps for all deployed pods
 type Artifacts struct {
-	env         *Environment
-	RootLogsDir string
-	DBName      string
-	podsClient  clientV1.PodInterface
+	env        *Environment
+	DBName     string
+	podsClient clientV1.PodInterface
 }
 
 // NewArtifacts create new artifacts instance for provided environment
 func NewArtifacts(rootPath string, env *Environment) (*Artifacts, error) {
-	root := filepath.Join(rootPath, "logs")
-	if err := mkdirIfNotExists(root); err != nil {
-		return nil, err
-	}
 	podsClient := env.k8sClient.CoreV1().Pods(env.Config.NamespaceName)
 	return &Artifacts{
-		RootLogsDir: root,
-		env:         env,
-		podsClient:  podsClient,
+		env:        env,
+		podsClient: podsClient,
 	}, nil
 }
 
