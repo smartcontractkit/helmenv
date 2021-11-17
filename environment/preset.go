@@ -39,6 +39,18 @@ func LoadPresetConfig(cfgPath string) (*Config, error) {
 	return cfg, err
 }
 
+// IsCLIAllowed checks if we can use CLI
+func IsCLIAllowed(presetFilepath string) error {
+	cfg, err := LoadPresetConfig(presetFilepath)
+	if err != nil {
+		return err
+	}
+	if !cfg.Persistent && !cfg.PersistentConnection {
+		return fmt.Errorf("preset is for programmatic usage only, to use as a CLI set \"persistent\" and \"persistent_connection\" as true")
+	}
+	return nil
+}
+
 // NewEnvironmentFromPreset creates environment preset from config file
 func NewEnvironmentFromPreset(presetFilepath string) (*Environment, error) {
 	cfg, err := LoadPresetConfig(presetFilepath)

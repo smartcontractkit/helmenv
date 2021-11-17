@@ -15,8 +15,9 @@ func init() {
 
 func main() {
 	app := &cli.App{
-		Name:  "envcli",
-		Usage: "setup default environment",
+		Name:                 "envcli",
+		Usage:                "setup default environment",
+		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "kubectlProcess",
@@ -32,14 +33,21 @@ func main() {
 				Required: true,
 			},
 		},
+		Before: func(c *cli.Context) error {
+			presetPath := c.String("preset")
+			if err := environment.IsCLIAllowed(presetPath); err != nil {
+				return err
+			}
+			return nil
+		},
 		Commands: []*cli.Command{
 			{
 				Name:    "new",
 				Aliases: []string{"n"},
 				Usage:   "create new environment from preset file",
 				Action: func(c *cli.Context) error {
-					presetName := c.String("preset")
-					_, err := environment.NewEnvironmentFromPreset(presetName)
+					presetPath := c.String("preset")
+					_, err := environment.NewEnvironmentFromPreset(presetPath)
 					if err != nil {
 						return err
 					}
@@ -56,9 +64,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if !e.Config.PersistentConnection {
-						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
-					}
 					if err := e.Connect(); err != nil {
 						return err
 					}
@@ -70,8 +75,8 @@ func main() {
 				Aliases: []string{"dc"},
 				Usage:   "disconnects from the environment",
 				Action: func(c *cli.Context) error {
-					presetName := c.String("preset")
-					e, err := environment.LoadEnvironment(presetName)
+					presetPath := c.String("preset")
+					e, err := environment.LoadEnvironment(presetPath)
 					if err != nil {
 						return err
 					}
@@ -89,8 +94,8 @@ func main() {
 				Aliases: []string{"rm"},
 				Usage:   "remove the environment",
 				Action: func(c *cli.Context) error {
-					presetName := c.String("preset")
-					e, err := environment.LoadEnvironment(presetName)
+					presetPath := c.String("preset")
+					e, err := environment.LoadEnvironment(presetPath)
 					if err != nil {
 						return err
 					}
@@ -122,10 +127,10 @@ func main() {
 				},
 				Usage: "dump all the logs from the environment",
 				Action: func(c *cli.Context) error {
-					presetName := c.String("preset")
+					presetPath := c.String("preset")
 					artifactsDir := c.String("artifacts")
 					dbName := c.String("database")
-					e, err := environment.LoadEnvironment(presetName)
+					e, err := environment.LoadEnvironment(presetPath)
 					if err != nil {
 						return err
 					}
@@ -152,9 +157,9 @@ func main() {
 							},
 						},
 						Action: func(c *cli.Context) error {
-							presetName := c.String("preset")
+							presetPath := c.String("preset")
 							chaosTemplate := c.String("template")
-							e, err := environment.LoadEnvironment(presetName)
+							e, err := environment.LoadEnvironment(presetPath)
 							if err != nil {
 								return err
 							}
@@ -177,9 +182,9 @@ func main() {
 						},
 						Usage: "stops particular chaos experiment",
 						Action: func(c *cli.Context) error {
-							presetName := c.String("preset")
+							presetPath := c.String("preset")
 							chaosID := c.String("experiment")
-							e, err := environment.LoadEnvironment(presetName)
+							e, err := environment.LoadEnvironment(presetPath)
 							if err != nil {
 								return err
 							}
@@ -198,8 +203,8 @@ func main() {
 						Aliases: []string{"c"},
 						Usage:   "clears all applied chaos experiments",
 						Action: func(c *cli.Context) error {
-							presetName := c.String("preset")
-							e, err := environment.LoadEnvironment(presetName)
+							presetPath := c.String("preset")
+							e, err := environment.LoadEnvironment(presetPath)
 							if err != nil {
 								return err
 							}
