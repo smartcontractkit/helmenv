@@ -145,6 +145,24 @@ func (cc *ChartConnections) RemoteWSURLs(portName string) ([]*url.URL, error) {
 	return cc.RemoteURLs("ws://%s:%d", portName)
 }
 
+// RemoteHTTPURL scans all the connections returns remote URLs based on a port name of a service
+func (cc *ChartConnections) RemoteHTTPURL(portName string) (*url.URL, error) {
+	urls, err := cc.RemoteURLs("http://%s:%d", portName)
+	if err != nil {
+		return nil, err
+	}
+	return urls[0], err
+}
+
+// RemoteWSURL scans all the connections returns remote URLs based on a port name of a service
+func (cc *ChartConnections) RemoteWSURL(portName string) (*url.URL, error) {
+	urls, err := cc.RemoteURLs("ws://%s:%d", portName)
+	if err != nil {
+		return nil, err
+	}
+	return urls[0], err
+}
+
 // RemoteURLs scans all the connections returns remote URLs based on a port number of a service and a string directive
 func (cc *ChartConnections) RemoteURLs(stringDirective string, portName string) ([]*url.URL, error) {
 	var urls []*url.URL
@@ -171,6 +189,24 @@ func (cc *ChartConnections) LocalHTTPURLs(portName string) ([]*url.URL, error) {
 // LocalWSURLs scans all the connections returns local URLs based on a remote port name of a service
 func (cc *ChartConnections) LocalWSURLs(portName string) ([]*url.URL, error) {
 	return cc.LocalURLs("ws://localhost:%d", portName)
+}
+
+// LocalHTTPURL scans all the connections returns local URL based on a remote port name of a service
+func (cc *ChartConnections) LocalHTTPURL(portName string) (*url.URL, error) {
+	urls, err := cc.LocalURLs("http://localhost:%d", portName)
+	if err != nil {
+		return nil, err
+	}
+	return urls[0], nil
+}
+
+// LocalWSURL scans all the connections returns local URL based on a remote port name of a service
+func (cc *ChartConnections) LocalWSURL(portName string) (*url.URL, error) {
+	urls, err := cc.LocalURLs("ws://localhost:%d", portName)
+	if err != nil {
+		return nil, err
+	}
+	return urls[0], nil
 }
 
 // LocalURLs scans all the connections returns remote URLs based on a port number of a service and a string directive
