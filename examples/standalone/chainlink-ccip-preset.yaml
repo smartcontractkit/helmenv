@@ -1,9 +1,0 @@
-name: chainlink-ccip
-persistent: true
-persistent_connection: true
-preset:
-  name: chainlink-ccip
-  type: chainlink-ccip
-  values:
-    chainlink:
-      replicas: 1

@@ -2,7 +2,7 @@ package environment
 
 import "github.com/smartcontractkit/helmenv/chaos"
 
-// ClearAllStandaloneExperiments remove all chaos experiments from a standalone env
+// ClearAllStandaloneExperiments remove all chaos experiments from a presets env
 func (k *Environment) ClearAllStandaloneExperiments(expInfos map[string]*chaos.ExperimentInfo) error {
 	if err := k.Chaos.StopAllStandalone(expInfos); err != nil {
 		return err
@@ -14,7 +14,7 @@ func (k *Environment) ClearAllStandaloneExperiments(expInfos map[string]*chaos.E
 	return nil
 }
 
-// StopExperimentStandalone stops experiment in a standalone env
+// StopExperimentStandalone stops experiment in a presets env
 func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) error {
 	if err := k.Chaos.StopStandalone(expInfo); err != nil {
 		return err
@@ -29,7 +29,7 @@ func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) er
 	return nil
 }
 
-// ApplyExperimentStandalone applies experiment to a standalone env
+// ApplyExperimentStandalone applies experiment to a presets env
 func (k *Environment) ApplyExperimentStandalone(tmplPath string) error {
 	expInfo, err := k.Chaos.RunTemplate(tmplPath)
 	if err != nil {

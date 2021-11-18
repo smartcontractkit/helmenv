@@ -33,3 +33,6 @@ bin/
 # ide
 
 *.idea
+
+# Test yaml files
+/*.yaml

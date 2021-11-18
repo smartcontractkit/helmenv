@@ -1,113 +1,38 @@
 package environment
 
 import (
-	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/smartcontractkit/helmenv/tools"
-	"github.com/spf13/viper"
+	"os"
 	"path"
-	"path/filepath"
-	"strings"
 )
 
-// LoadPresetConfig loads preset config with viper, allows to override yaml values from env
-func LoadPresetConfig(cfgPath string) (*Config, error) {
-	dir, file := path.Split(cfgPath)
-	log.Info().
-		Str("Dir", dir).
-		Str("File", file).
-		Msg("Loading preset file")
-	v := viper.New()
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-	v.SetConfigName(file)
-	if dir == "" {
-		v.AddConfigPath(".")
-	} else {
-		v.AddConfigPath(dir)
-	}
-	v.SetConfigType("yml")
-
-	if err := v.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	var cfg *Config
-	err := v.Unmarshal(&cfg)
-	log.Debug().Interface("Config", cfg).Msg("Preset config")
-	return cfg, err
+// Preset represents a series of Helm charts to be installed into a new namespace
+type Preset struct {
+	NamespacePrefix string   `json:"namespace_prefix"`
+	Charts          []*Chart `json:"charts"`
 }
 
-// IsCLIAllowed checks if we can use CLI
-func IsCLIAllowed(presetFilepath string) error {
-	cfg, err := LoadPresetConfig(presetFilepath)
-	if err != nil {
-		return err
-	}
-	if !cfg.Persistent && !cfg.PersistentConnection {
-		return fmt.Errorf("preset is for programmatic usage only, to use as a CLI set \"persistent\" and \"persistent_connection\" as true")
-	}
-	return nil
-}
-
-// NewEnvironmentFromPreset creates environment preset from config file
-func NewEnvironmentFromPreset(presetFilepath string) (*Environment, error) {
-	cfg, err := LoadPresetConfig(presetFilepath)
+// NewEnvironmentFromPreset returns a deployed environment from a given preset that can be ones pre-defined within
+// the library, or passed in as part of lib usage
+func NewEnvironmentFromPreset(config *Config, preset *Preset, chartDirectory string) (*Environment, error) {
+	e, err := NewEnvironment(config)
 	if err != nil {
 		return nil, err
 	}
-	fp, err := filepath.Abs(presetFilepath)
-	if err != nil {
+	if err := e.Init(preset.NamespacePrefix); err != nil {
 		return nil, err
 	}
-	cfg.Preset.Filename = fp
-	if cfg.Persistent && cfg.Deployed {
-		return LoadEnvironment(presetFilepath)
-	}
-	switch cfg.Preset.Type {
-	case "chainlink-cluster":
-		return NewChainlinkEnv(cfg)
-	case "chainlink-reorg":
-		return NewChainlinkReorg(cfg)
-	case "chainlink-ccip":
-		return NewCCIPChainlink(cfg)
-	default:
-		return nil, fmt.Errorf("no suitable preset found: %s", cfg.Preset.Name)
-	}
-}
-
-// NewCCIPChainlink create new CCIP Chainlink environment preset
-func NewCCIPChainlink(cfg *Config) (*Environment, error) {
-	e, err := NewEnvironment(cfg)
-	if err != nil {
-		return nil, err
-	}
-	if err := e.Init(); err != nil {
-		return nil, err
-	}
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    "localterra",
-		Path:           filepath.Join(tools.ChartsRoot, "localterra"),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
-	}
-	gethReleaseName := "geth-reorg"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    gethReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
-	}
-	chainlinkReleaseName := "chainlink"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    chainlinkReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, chainlinkReleaseName),
-		OverrideValues: cfg.Preset.Values[chainlinkReleaseName].(map[string]interface{}),
-	}); err != nil {
-		return nil, err
+	for _, chart := range preset.Charts {
+		if len(chart.ReleaseName) == 0 {
+			chart.ReleaseName = chart.Path
+		}
+		if len(chartDirectory) > 0 {
+			chart.Path = path.Join(chartDirectory, chart.Path)
+		}
+		if err := e.AddChart(chart); err != nil {
+			return nil, err
+		}
 	}
 	if err := e.DeployAll(); err != nil {
 		if err := e.Teardown(); err != nil {
@@ -115,143 +40,83 @@ func NewCCIPChainlink(cfg *Config) (*Environment, error) {
 		}
 		return nil, err
 	}
-	if err := cfg.ccipURLs(); err != nil {
-		return nil, err
-	}
-	if err := e.SyncConfig(); err != nil {
-		return nil, err
-	}
-	return e, nil
+	return e, e.SyncConfig()
 }
 
-// NewTerraChainlink new chainlink env with LocalTerra blockchain
-func NewTerraChainlink(cfg *Config) (*Environment, error) {
-	e, err := NewEnvironment(cfg)
+// NewEnvironmentFromPresetFile returns an environment based on a preset file, mostly for use as a presets CLI
+func NewEnvironmentFromPresetFile(chartDirectory, filePath string) (*Environment, error) {
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	if err := e.Init(); err != nil {
+	preset := &Preset{}
+	if err := yaml.Unmarshal(contents, &preset); err != nil {
 		return nil, err
 	}
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    "localterra",
-		Path:           filepath.Join(tools.ChartsRoot, "localterra"),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
+	return NewEnvironmentFromPreset(&Config{Persistent: true, PersistentConnection: true}, preset, chartDirectory)
+}
+
+// NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
+func NewChainlinkChart(chainlinkOverrideValues map[string]interface{}) *Chart {
+	return &Chart{
+		Path:           "chainlink",
+		OverrideValues: chainlinkOverrideValues,
 	}
-	// TODO: awaiting ability to setup IC/CI creds via API, otherwise we have a circular dependency  in deployment
-	//if err := e.AddChart(&environment.ChartSettings{
-	//	ReleaseName: "terra-relay",
-	//	Path:        filepath.Join(tools.ChartsRoot, "terra-relay"),
-	//	OverrideValues:      nil,
-	//}); err != nil {
-	//	return nil, err
-	//}
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName: "chainlink",
-		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
-		OverrideValues: map[string]interface{}{
-			"replicaCount": 2,
+}
+
+// NewChainlinkCCIPPreset returns a Chainlink environment for the purpose of CCIP testing
+func NewChainlinkCCIPPreset(chainlinkOverrideValues map[string]interface{}) *Preset {
+	return &Preset{
+		NamespacePrefix: "chainlink-ccip",
+		Charts: []*Chart{
+			{Path: "localterra"},
+			{Path: "geth-reorg"},
+			NewChainlinkChart(chainlinkOverrideValues),
 		},
-	}); err != nil {
-		return nil, err
 	}
-	if err := e.DeployAll(); err != nil {
-		if err := e.Teardown(); err != nil {
-			return nil, errors.Wrapf(err, "failed to shutdown namespace")
-		}
-		return nil, err
-	}
-	return e, nil
 }
 
-// NewChainlinkReorg creates new chainlink reorg environment
-func NewChainlinkReorg(cfg *Config) (*Environment, error) {
-	e, err := NewEnvironment(cfg)
-	if err != nil {
-		return nil, err
+// NewTerraChainlinkPreset returns a Chainlink environment designed for testing with a Terra relay
+func NewTerraChainlinkPreset(chainlinkOverrideValues map[string]interface{}) *Preset {
+	return &Preset{
+		NamespacePrefix: "chainlink-terra",
+		Charts: []*Chart{
+			{Path: "localterra"},
+			{Path: "terra-relay"},
+			{Path: "geth-reorg"},
+			NewChainlinkChart(ChainlinkReplicas(2, nil)),
+		},
 	}
-	if err := e.Init(); err != nil {
-		return nil, err
-	}
-	gethReleaseName := "geth-reorg"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    gethReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
-	}
-	chainlinkReleaseName := "chainlink"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    chainlinkReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, chainlinkReleaseName),
-		OverrideValues: cfg.Preset.Values[chainlinkReleaseName].(map[string]interface{}),
-	}); err != nil {
-		return nil, err
-	}
-	if err := e.DeployAll(); err != nil {
-		if err := e.Teardown(); err != nil {
-			return nil, errors.Wrapf(err, "failed to shutdown namespace")
-		}
-		return nil, err
-	}
-	return e, nil
 }
 
-// NewChainlinkEnv creates new chainlink environment
-func NewChainlinkEnv(cfg *Config) (*Environment, error) {
-	e, err := NewEnvironment(cfg)
-	if err != nil {
-		return nil, err
+// NewChainlinkReorgPreset returns a Chainlink environment designed for simulating re-orgs within testing
+func NewChainlinkReorgPreset(chainlinkOverrideValues map[string]interface{}) *Preset {
+	return &Preset{
+		NamespacePrefix: "chainlink-reorg",
+		Charts: []*Chart{
+			{Path: "geth-reorg"},
+			NewChainlinkChart(chainlinkOverrideValues),
+		},
 	}
-	if err := e.Init(); err != nil {
-		return nil, err
+}
+
+// NewChainlinkPreset returns a vanilla Chainlink environment used for generic functional testing
+func NewChainlinkPreset(chainlinkOverrideValues map[string]interface{}) *Preset {
+	return &Preset{
+		NamespacePrefix: "chainlink",
+		Charts: []*Chart{
+			{Path: "geth"},
+			{Path: "mockserver-config"},
+			{Path: "mockserver"},
+			NewChainlinkChart(chainlinkOverrideValues),
+		},
 	}
-	gethReleaseName := "geth"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    gethReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, gethReleaseName),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
+}
+
+func ChainlinkReplicas(count int, chainlinkOverrideValues map[string]interface{}) map[string]interface{} {
+	if chainlinkOverrideValues == nil {
+		chainlinkOverrideValues = map[string]interface{}{}
 	}
-	mockServerCfgReleaseName := "mockserver-config"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    mockServerCfgReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, mockServerCfgReleaseName),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
-	}
-	mockServerReleaseName := "mockserver"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    mockServerReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, mockServerReleaseName),
-		OverrideValues: nil,
-	}); err != nil {
-		return nil, err
-	}
-	chainlinkReleaseName := "chainlink"
-	if err := e.AddChart(&ChartSettings{
-		ReleaseName:    chainlinkReleaseName,
-		Path:           filepath.Join(tools.ChartsRoot, chainlinkReleaseName),
-		OverrideValues: cfg.Preset.Values[chainlinkReleaseName].(map[string]interface{}),
-	}); err != nil {
-		return nil, err
-	}
-	if err := e.DeployAll(); err != nil {
-		if err := e.Teardown(); err != nil {
-			return nil, errors.Wrapf(err, "failed to shutdown namespace")
-		}
-		return nil, err
-	}
-	if err := cfg.chainlinkClusterURLs(); err != nil {
-		return nil, err
-	}
-	if err := e.SyncConfig(); err != nil {
-		return nil, err
-	}
-	return e, nil
+	chainlinkOverrideValues["replicaCount"] = count
+	return chainlinkOverrideValues
 }

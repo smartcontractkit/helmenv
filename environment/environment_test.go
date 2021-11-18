@@ -24,21 +24,19 @@ func teardown(t *testing.T, e *environment.Environment) {
 
 func TestCanDeployAll(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
-	e, err := environment.NewEnvironment(&environment.Config{
-		Name: envName,
-	})
+	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
 	require.NoError(t, err)
-	err = e.Init()
+	err = e.Init(envName)
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.ChartSettings{
+	err = e.AddChart(&environment.Chart{
 		ReleaseName: "geth",
 		Path:        filepath.Join(tools.ChartsRoot, "geth"),
 	})
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.ChartSettings{
+	err = e.AddChart(&environment.Chart{
 		ReleaseName: "chainlink",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
 	})
@@ -46,55 +44,53 @@ func TestCanDeployAll(t *testing.T) {
 
 	err = e.DeployAll()
 	require.NoError(t, err)
-	err = e.Connect()
+	err = e.ConnectAll()
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth_0_geth-network"].Ports["ws-rpc"])
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth_0_geth-network"].LocalPorts["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_node"].Ports["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_chainlink-db"].Ports["postgres"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].Ports["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].LocalPorts["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
 }
 
 func TestMultipleChartsSeparate(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
-	e, err := environment.NewEnvironment(&environment.Config{
-		Name: envName,
-	})
+	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
 	require.NoError(t, err)
-	err = e.Init()
+	err = e.Init(envName)
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.ChartSettings{
+	err = e.AddChart(&environment.Chart{
 		ReleaseName: "geth",
 		Path:        filepath.Join(tools.ChartsRoot, "geth"),
 	})
 	require.NoError(t, err)
-	err = e.Charts["geth"].Deploy()
+	err = e.Deploy("geth")
 	require.NoError(t, err)
-	err = e.Charts["geth"].Connect()
+	err = e.Connect("geth")
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.ChartSettings{
+	err = e.AddChart(&environment.Chart{
 		ReleaseName: "chainlink",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
 	})
 	require.NoError(t, err)
-	err = e.Charts["chainlink"].Deploy()
+	err = e.Deploy("chainlink")
 	require.NoError(t, err)
-	err = e.Charts["chainlink"].Connect()
+	err = e.Connect("chainlink")
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth_0_geth-network"].Ports["ws-rpc"])
-	require.NotEmpty(t, e.Config.ChartsInfo["geth"].ConnectionInfo["geth_0_geth-network"].LocalPorts["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_node"].Ports["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_chainlink-db"].Ports["postgres"])
-	require.NotEmpty(t, e.Config.ChartsInfo["chainlink"].ConnectionInfo["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].Ports["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].LocalPorts["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
 }
 
 func TestCanConnectProgrammatically(t *testing.T) {

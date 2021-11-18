@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/kube"
@@ -22,8 +23,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"helm.sh/helm/v3/pkg/action"
 )
 
 const (
@@ -37,86 +36,66 @@ const (
 	InstanceEnumerationLabelKey = "instance"
 )
 
-// ChartSettings chart settings config
-type ChartSettings struct {
-	ReleaseName    string                     `json:"release_name" mapstructure:"release_name"`
-	Path           string                     `json:"path" mapstructure:"path"`
-	OverrideValues map[string]interface{}     `json:"values" mapstructure:"values"`
-	ConnectionInfo map[string]*ConnectionInfo `json:"pods_info" mapstructure:"pods_info"`
+// Chart represents a single Helm chart to be installed into a cluster
+type Chart struct {
+	ReleaseName      string                 `json:"release_name,omitempty"`
+	Path             string                 `json:"path,omitempty"`
+	OverrideValues   map[string]interface{} `json:"override_values,omitempty"`
+	ChartConnections ChartConnections       `json:"chart_connections,omitempty"`
 }
 
 // HelmChart helm chart structure
 type HelmChart struct {
 	Name          string
 	NamespaceName string
-	settings      *ChartSettings
+
+	settings      *Chart
 	env           *Environment
 	actionConfig  *action.Configuration
 	podsList      *v1.PodList
 }
 
 // NewHelmChart creates a new Helm chart wrapper
-func NewHelmChart(env *Environment, cfg *ChartSettings) (*HelmChart, error) {
+func NewHelmChart(env *Environment, chart *Chart) (*HelmChart, error) {
+	if chart.ChartConnections == nil {
+		chart.ChartConnections = ChartConnections{}
+	}
 	hc := &HelmChart{
-		Name:          cfg.ReleaseName,
+		Name:          chart.ReleaseName,
 		env:           env,
-		settings:      cfg,
+		settings:      chart,
 		NamespaceName: env.Config.NamespaceName,
 	}
-	if err := hc.initAction(); err != nil {
+	if err := hc.init(); err != nil {
 		return nil, err
 	}
 	return hc, nil
 }
 
-func (hc *HelmChart) makePortRules(connectionInfo *ConnectionInfo) ([]string, error) {
-	rules := make([]string, 0)
-	for portName, port := range connectionInfo.Ports {
-		freePort := rand.Intn(MaxPort-MinPort) + MinPort
-		if portName == "" {
-			return nil, fmt.Errorf("port %d must be named in helm chart", port)
-		}
-		connectionInfo.LocalPorts[portName] = freePort
-		rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
-	}
-	return rules, nil
-}
-
-func (hc *HelmChart) connectPod(connectionInfo *ConnectionInfo, rules []string) error {
-	if len(rules) == 0 {
-		return nil
-	}
-	if !hc.env.Config.PersistentConnection {
-		if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
-			return err
-		}
-		return nil
-	}
-	pid, err := hc.env.runProcessForwarder(connectionInfo.PodName, rules)
-	if err != nil {
-		return err
-	}
-	connectionInfo.ForwarderPID = pid
-	return nil
-}
-
 // Connect connects to all exposed containerPorts, forwards them to local
 func (hc *HelmChart) Connect() error {
-	for _, connectionInfo := range hc.settings.ConnectionInfo {
-		if connectionInfo.ForwarderPID != 0 {
+	var rangeErr error
+	hc.settings.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
+		if chartConnection.ForwarderPID != 0 {
 			log.Info().
-				Str("Pod", connectionInfo.PodName).
-				Interface("Ports", connectionInfo.LocalPorts).
+				Str("Pod", chartConnection.PodName).
+				Interface("Ports", chartConnection.LocalPorts).
 				Msg("Already connected")
-			continue
+			return true
 		}
-		rules, err := hc.makePortRules(connectionInfo)
+		rules, err := hc.makePortRules(chartConnection)
 		if err != nil {
-			return err
+			rangeErr = err
+			return false
 		}
-		if err := hc.connectPod(connectionInfo, rules); err != nil {
-			return err
+		if err := hc.connectPod(chartConnection, rules); err != nil {
+			rangeErr = err
+			return false
 		}
+		return true
+	})
+	if rangeErr != nil {
+		return rangeErr
 	}
 	return nil
 }
@@ -138,7 +117,7 @@ func (hc *HelmChart) Deploy() error {
 	return nil
 }
 
-func (hc *HelmChart) initAction() error {
+func (hc *HelmChart) init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -197,7 +176,7 @@ func (hc *HelmChart) deployChart() error {
 		Str("Namespace", hc.NamespaceName).
 		Str("Release", hc.settings.ReleaseName).
 		Str("Chart", hc.settings.Path).
-		Msg("Succesfully installed helm chart")
+		Msg("Successfully installed helm chart")
 	return nil
 }
 
@@ -232,9 +211,6 @@ func (hc *HelmChart) addInstanceLabel(app string) error {
 func (hc *HelmChart) updateChartSettings() error {
 	for _, p := range hc.podsList.Items {
 		for _, c := range p.Spec.Containers {
-			if hc.settings.ConnectionInfo == nil {
-				hc.settings.ConnectionInfo = make(map[string]*ConnectionInfo)
-			}
 			app, ok := p.Labels[AppEnumerationLabelKey]
 			if !ok {
 				log.Warn().Str("Container", c.Name).Msg("App label not found")
@@ -247,19 +223,17 @@ func (hc *HelmChart) updateChartSettings() error {
 				Str("Container", c.Name).
 				Interface("PodPorts", c.Ports).
 				Msg("Container info")
-			instanceKey := fmt.Sprintf("%s_%s_%s", app, instance, c.Name)
-			if _, ok := hc.settings.ConnectionInfo[instanceKey]; ok {
-				return fmt.Errorf("ambiguous instance key: %s", instanceKey)
-			}
 			pm := map[string]int{}
 			for _, port := range c.Ports {
 				pm[port.Name] = int(port.ContainerPort)
 			}
-			hc.settings.ConnectionInfo[instanceKey] = &ConnectionInfo{
+			if err := hc.settings.ChartConnections.Store(app, instance, c.Name, &ChartConnection{
 				PodName:    p.Name,
 				PodIP:      p.Status.PodIP,
 				Ports:      pm,
 				LocalPorts: make(map[string]int),
+			}); err != nil {
+				return err
 			}
 		}
 	}
@@ -332,9 +306,14 @@ func forkProcess(processName string, args []string) (int, error) {
 
 // runProcessForwarder forking "kubectl port-forward" command and gets PID
 func (k *Environment) runProcessForwarder(podName string, portRules []string) (int, error) {
+	kubectlPath, err := exec.LookPath("kubectl")
+	if err != nil {
+		return 0, fmt.Errorf("kubectl doesn't appear to be installed on this machine: %v", err)
+	}
+
 	portRulesStr := strings.Join(portRules, " ")
 	processArgs := []string{
-		k.Config.KubeCtlProcessName,
+		kubectlPath,
 		"-n",
 		k.Config.NamespaceName,
 		"port-forward",
@@ -344,7 +323,7 @@ func (k *Environment) runProcessForwarder(podName string, portRules []string) (i
 	log.Debug().
 		Str("Args", strings.Join(processArgs, " ")).
 		Msg("Process args")
-	pid, err := forkProcess(k.Config.KubeCtlProcessName, processArgs)
+	pid, err := forkProcess(kubectlPath, processArgs)
 	if err != nil {
 		return 0, err
 	}
@@ -391,5 +370,36 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 		msg := strings.ReplaceAll(out.String(), "\n", " ")
 		log.Debug().Str("Pod", podName).Msgf("%s", msg)
 	}
+	return nil
+}
+
+func (hc *HelmChart) makePortRules(chartConnection *ChartConnection) ([]string, error) {
+	rules := make([]string, 0)
+	for portName, port := range chartConnection.Ports {
+		freePort := rand.Intn(MaxPort-MinPort) + MinPort
+		if portName == "" {
+			return nil, fmt.Errorf("port %d must be named in helm chart", port)
+		}
+		chartConnection.LocalPorts[portName] = freePort
+		rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
+	}
+	return rules, nil
+}
+
+func (hc *HelmChart) connectPod(connectionInfo *ChartConnection, rules []string) error {
+	if len(rules) == 0 {
+		return nil
+	}
+	if !hc.env.Config.PersistentConnection {
+		if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
+			return err
+		}
+		return nil
+	}
+	pid, err := hc.env.runProcessForwarder(connectionInfo.PodName, rules)
+	if err != nil {
+		return err
+	}
+	connectionInfo.ForwarderPID = pid
 	return nil
 }

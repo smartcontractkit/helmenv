@@ -5,52 +5,48 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/environment"
+	"github.com/smartcontractkit/helmenv/tools"
 	"github.com/urfave/cli/v2"
 	"os"
 )
 
 func init() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(zerolog.InfoLevel)
+}
+
+var presetFlag = &cli.StringFlag{
+	Name:     "preset",
+	Aliases:  []string{"p"},
+	Usage:    "filepath to the environment preset",
+	Required: true,
+}
+
+var environmentFlag = &cli.StringFlag{
+	Name:     "environment",
+	Aliases:  []string{"e"},
+	Usage:    "filepath to the environment file",
+	Required: true,
 }
 
 func main() {
 	app := &cli.App{
-		Name:                 "envcli",
-		Usage:                "setup default environment",
-		EnableBashCompletion: true,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "kubectlProcess",
-				Aliases:  []string{"kctl"},
-				Value:    "/usr/local/bin/kubectl",
-				Usage:    "kubectl process name to use forking for port forwarding",
-				Required: false,
-			},
-			&cli.StringFlag{
-				Name:     "preset",
-				Aliases:  []string{"p"},
-				Usage:    "environment preset name",
-				Required: true,
-			},
-		},
-		Before: func(c *cli.Context) error {
-			presetPath := c.String("preset")
-			if err := environment.IsCLIAllowed(presetPath); err != nil {
-				return err
-			}
-			return nil
-		},
+		Name:  "envcli",
+		Usage: "setup default environment",
 		Commands: []*cli.Command{
 			{
 				Name:    "new",
 				Aliases: []string{"n"},
 				Usage:   "create new environment from preset file",
+				Flags:   []cli.Flag{presetFlag},
 				Action: func(c *cli.Context) error {
-					presetPath := c.String("preset")
-					_, err := environment.NewEnvironmentFromPreset(presetPath)
+					preset := c.String("preset")
+					e, err := environment.NewEnvironmentFromPresetFile(tools.ChartsRoot, preset)
 					if err != nil {
 						return err
 					}
+					log.Info().
+						Str("environmentFile", fmt.Sprintf("%s.yaml", e.Config.NamespaceName)).
+						Msg("Environment setup and written to file")
 					return nil
 				},
 			},
@@ -58,13 +54,17 @@ func main() {
 				Name:    "connect",
 				Aliases: []string{"c"},
 				Usage:   "connects to selected environment",
+				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
-					presetPath := c.String("preset")
-					e, err := environment.LoadEnvironment(presetPath)
+					environmentPath := c.String("environment")
+					e, err := environment.LoadPersistentEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
-					if err := e.Connect(); err != nil {
+					if !e.Config.PersistentConnection {
+						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
+					}
+					if err := e.ConnectAll(); err != nil {
 						return err
 					}
 					return nil
@@ -74,9 +74,10 @@ func main() {
 				Name:    "disconnect",
 				Aliases: []string{"dc"},
 				Usage:   "disconnects from the environment",
+				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
-					presetPath := c.String("preset")
-					e, err := environment.LoadEnvironment(presetPath)
+					environmentPath := c.String("environment")
+					e, err := environment.LoadPersistentEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -93,9 +94,10 @@ func main() {
 				Name:    "remove",
 				Aliases: []string{"rm"},
 				Usage:   "remove the environment",
+				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
-					presetPath := c.String("preset")
-					e, err := environment.LoadEnvironment(presetPath)
+					environmentPath := c.String("environment")
+					e, err := environment.LoadPersistentEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -112,6 +114,7 @@ func main() {
 				Name:    "dump",
 				Aliases: []string{"d"},
 				Flags: []cli.Flag{
+					environmentFlag,
 					&cli.StringFlag{
 						Name:     "artifacts",
 						Aliases:  []string{"a"},
@@ -127,10 +130,10 @@ func main() {
 				},
 				Usage: "dump all the logs from the environment",
 				Action: func(c *cli.Context) error {
-					presetPath := c.String("preset")
+					environmentPath := c.String("environment")
 					artifactsDir := c.String("artifacts")
 					dbName := c.String("database")
-					e, err := environment.LoadEnvironment(presetPath)
+					e, err := environment.LoadPersistentEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -149,6 +152,7 @@ func main() {
 						Name:    "apply",
 						Aliases: []string{"a"},
 						Flags: []cli.Flag{
+							environmentFlag,
 							&cli.StringFlag{
 								Name:     "template",
 								Aliases:  []string{"t"},
@@ -157,9 +161,9 @@ func main() {
 							},
 						},
 						Action: func(c *cli.Context) error {
-							presetPath := c.String("preset")
+							environmentPath := c.String("environment")
 							chaosTemplate := c.String("template")
-							e, err := environment.LoadEnvironment(presetPath)
+							e, err := environment.LoadPersistentEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}
@@ -173,18 +177,19 @@ func main() {
 						Name:    "stop",
 						Aliases: []string{"s"},
 						Flags: []cli.Flag{
+							environmentFlag,
 							&cli.StringFlag{
-								Name:     "experiment",
-								Aliases:  []string{"e"},
+								Name:     "chaos_id",
+								Aliases:  []string{"c"},
 								Usage:    "chaos experiment name",
 								Required: true,
 							},
 						},
 						Usage: "stops particular chaos experiment",
 						Action: func(c *cli.Context) error {
-							presetPath := c.String("preset")
-							chaosID := c.String("experiment")
-							e, err := environment.LoadEnvironment(presetPath)
+							environmentPath := c.String("environment")
+							chaosID := c.String("chaos_id")
+							e, err := environment.LoadPersistentEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}
@@ -202,9 +207,10 @@ func main() {
 						Name:    "clear",
 						Aliases: []string{"c"},
 						Usage:   "clears all applied chaos experiments",
+						Flags:   []cli.Flag{environmentFlag},
 						Action: func(c *cli.Context) error {
-							presetPath := c.String("preset")
-							e, err := environment.LoadEnvironment(presetPath)
+							environmentPath := c.String("environment")
+							e, err := environment.LoadPersistentEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}

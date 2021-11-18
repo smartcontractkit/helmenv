@@ -165,7 +165,7 @@ func (c *Controller) Run(exp Experimentable) (string, error) {
 	return payload.Name, nil
 }
 
-// StopAllStandalone stops all chaos experiments for a standalone env
+// StopAllStandalone stops all chaos experiments for a presets env
 func (c *Controller) StopAllStandalone(expInfos map[string]*ExperimentInfo) error {
 	for _, e := range expInfos {
 		if err := c.StopStandalone(e); err != nil {
@@ -175,7 +175,7 @@ func (c *Controller) StopAllStandalone(expInfos map[string]*ExperimentInfo) erro
 	return nil
 }
 
-// StopStandalone removes experiment's entity for a standalone env
+// StopStandalone removes experiment's entity for a presets env
 func (c *Controller) StopStandalone(expInfo *ExperimentInfo) error {
 	log.Info().Str("ID", expInfo.Name).Msg("Deleting chaos experiment")
 	req := c.Client.RESTClient().
