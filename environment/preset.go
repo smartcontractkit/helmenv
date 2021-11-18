@@ -113,6 +113,18 @@ func NewChainlinkPreset(chainlinkOverrideValues map[string]interface{}) *Preset 
 	}
 }
 
+func ChainlinkVersion(version string, chainlinkOverrideValues map[string]interface{}) map[string]interface{} {
+	if chainlinkOverrideValues == nil {
+		chainlinkOverrideValues = map[string]interface{}{}
+	}
+	chainlinkOverrideValues["chainlink"] = map[string]interface{}{
+		"image": map[string]interface{}{
+			"version": version,
+		},
+	}
+	return chainlinkOverrideValues
+}
+
 func ChainlinkReplicas(count int, chainlinkOverrideValues map[string]interface{}) map[string]interface{} {
 	if chainlinkOverrideValues == nil {
 		chainlinkOverrideValues = map[string]interface{}{}
