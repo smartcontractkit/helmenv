@@ -129,6 +129,6 @@ func ChainlinkReplicas(count int, chainlinkOverrideValues map[string]interface{}
 	if chainlinkOverrideValues == nil {
 		chainlinkOverrideValues = map[string]interface{}{}
 	}
-	chainlinkOverrideValues["replicaCount"] = count
+	chainlinkOverrideValues["replicas"] = count
 	return chainlinkOverrideValues
 }
