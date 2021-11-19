@@ -40,7 +40,7 @@ func main() {
 				Flags:   []cli.Flag{presetFlag},
 				Action: func(c *cli.Context) error {
 					preset := c.String("preset")
-					e, err := environment.NewEnvironmentFromConfigFile(tools.ChartsRoot, preset)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, preset)
 					if err != nil {
 						return err
 					}

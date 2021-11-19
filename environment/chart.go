@@ -38,10 +38,11 @@ const (
 
 // Chart represents a single Helm chart to be installed into a cluster
 type Chart struct {
-	ReleaseName      string                 `json:"release_name,omitempty"`
-	Path             string                 `json:"path,omitempty"`
-	OverrideValues   map[string]interface{} `json:"override_values,omitempty"`
-	ChartConnections ChartConnections       `json:"chart_connections,omitempty"`
+	ReleaseName      string                 `json:"release_name,omitempty" envconfig:"release_name"`
+	Path             string                 `json:"path,omitempty" envconfig:"path"`
+	Values           map[string]interface{} `json:"values,omitempty" envconfig:"values"`
+	Index            int                    `json:"index,omitempty" envconfig:"index"`
+	ChartConnections ChartConnections       `json:"chart_connections,omitempty" envconfig:"chart_connections"`
 }
 
 // HelmChart helm chart structure
@@ -149,14 +150,14 @@ func (hc *HelmChart) deployChart() error {
 	log.Info().Str("Path", hc.Path).
 		Str("Release", hc.ReleaseName).
 		Str("Namespace", hc.NamespaceName).
-		Interface("Override values", hc.OverrideValues).
+		Interface("Override values", hc.Values).
 		Msg("Installing Helm chart")
 	chart, err := loader.Load(hc.Path)
 	if err != nil {
 		return err
 	}
 
-	chart.Values, err = chartutil.CoalesceValues(chart, hc.OverrideValues)
+	chart.Values, err = chartutil.CoalesceValues(chart, hc.Values)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ func init() {
 }
 
 func main() {
-	e, err := environment.NewEnvironmentFromConfig(
+	e, err := environment.DeployOrLoadEnvironment(
 		environment.NewChainlinkConfig(nil),
 		tools.ChartsRoot,
 	)

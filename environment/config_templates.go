@@ -1,78 +1,74 @@
 package environment
 
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
-func NewChainlinkChart(chainlinkOverrideValues map[string]interface{}) *Chart {
-	return &Chart{
-		Path:           "chainlink",
-		OverrideValues: chainlinkOverrideValues,
-	}
+func NewChainlinkChart(index int, values map[string]interface{}) *Chart {
+	return &Chart{Path: "chainlink", Values: values, Index: index}
 }
 
 // NewChainlinkCCIPConfig returns a Chainlink environment for the purpose of CCIP testing
-func NewChainlinkCCIPConfig(chainlinkOverrideValues map[string]interface{}) *Config {
+func NewChainlinkCCIPConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-ccip",
-		Charts: []*Chart{
-			{Path: "localterra"},
-			{Path: "geth-reorg"},
-			NewChainlinkChart(chainlinkOverrideValues),
+		Charts: Charts{
+			"localterra": {Index: 0},
+			"geth-reorg": {Index: 1},
+			"chainlink":  NewChainlinkChart(2, chainlinkValues),
 		},
 	}
 }
 
 // NewTerraChainlinkConfig returns a Chainlink environment designed for testing with a Terra relay
-func NewTerraChainlinkConfig(chainlinkOverrideValues map[string]interface{}) *Config {
+func NewTerraChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-terra",
-		Charts: []*Chart{
-			{Path: "localterra"},
-			{Path: "terra-relay"},
-			{Path: "geth-reorg"},
-			NewChainlinkChart(ChainlinkReplicas(2, nil)),
+		Charts: Charts{
+			"localterra": {Index: 0},
+			"geth-reorg": {Index: 1},
+			"chainlink":  NewChainlinkChart(2, ChainlinkReplicas(2, chainlinkValues)),
 		},
 	}
 }
 
 // NewChainlinkReorgConfig returns a Chainlink environment designed for simulating re-orgs within testing
-func NewChainlinkReorgConfig(chainlinkOverrideValues map[string]interface{}) *Config {
+func NewChainlinkReorgConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-reorg",
-		Charts: []*Chart{
-			{Path: "geth-reorg"},
-			NewChainlinkChart(chainlinkOverrideValues),
+		Charts: Charts{
+			"geth-reorg": {Index: 0},
+			"chainlink":  NewChainlinkChart(1, chainlinkValues),
 		},
 	}
 }
 
 // NewChainlinkConfig returns a vanilla Chainlink environment used for generic functional testing
-func NewChainlinkConfig(chainlinkOverrideValues map[string]interface{}) *Config {
+func NewChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink",
-		Charts: []*Chart{
-			{Path: "geth"},
-			{Path: "mockserver-config"},
-			{Path: "mockserver"},
-			NewChainlinkChart(chainlinkOverrideValues),
+		Charts: Charts{
+			"geth":              {Index: 0},
+			"mockserver-config": {Index: 1},
+			"mockserver":        {Index: 2},
+			"chainlink":         NewChainlinkChart(3, chainlinkValues),
 		},
 	}
 }
 
-func ChainlinkVersion(version string, chainlinkOverrideValues map[string]interface{}) map[string]interface{} {
-	if chainlinkOverrideValues == nil {
-		chainlinkOverrideValues = map[string]interface{}{}
+func ChainlinkVersion(version string, values map[string]interface{}) map[string]interface{} {
+	if values == nil {
+		values = map[string]interface{}{}
 	}
-	chainlinkOverrideValues["chainlink"] = map[string]interface{}{
+	values["chainlink"] = map[string]interface{}{
 		"image": map[string]interface{}{
 			"version": version,
 		},
 	}
-	return chainlinkOverrideValues
+	return values
 }
 
-func ChainlinkReplicas(count int, chainlinkOverrideValues map[string]interface{}) map[string]interface{} {
-	if chainlinkOverrideValues == nil {
-		chainlinkOverrideValues = map[string]interface{}{}
+func ChainlinkReplicas(count int, values map[string]interface{}) map[string]interface{} {
+	if values == nil {
+		values = map[string]interface{}{}
 	}
-	chainlinkOverrideValues["replicas"] = count
-	return chainlinkOverrideValues
+	values["replicas"] = count
+	return values
 }

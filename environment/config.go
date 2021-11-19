@@ -1,33 +1,65 @@
 package environment
 
 import (
+	"github.com/imdario/mergo"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/smartcontractkit/helmenv/chaos"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/util/json"
 	"os"
+	"sort"
 )
 
 // Config represents the full configuration of an environment, it can either be defined
 // programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
-	Persistent           bool                             `json:"persistent"`
-	PersistentConnection bool                             `json:"persistent_connection"`
-	NamespacePrefix      string                           `json:"namespace_prefix,omitempty"`
-	Namespace            string                           `json:"namespace,omitempty"`
-	Charts               Charts                           `json:"charts,omitempty"`
-	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty"`
+	Persistent           bool                             `json:"persistent" envconfig:"persistent"`
+	PersistentConnection bool                             `json:"persistent_connection" envconfig:"persistent_connection"`
+	NamespacePrefix      string                           `json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
+	Namespace            string                           `json:"namespace,omitempty" envconfig:"namespace"`
+	Charts               Charts                           `json:"charts,omitempty" envconfig:"charts"`
+	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty" envconfig:"experiments"`
 }
 
-// Charts represents a series of charts with some helper methods
-type Charts []*Chart
+// Charts represents a map of charts with some helper methods
+type Charts map[string]*Chart
 
 // Connections is a helper method for simply accessing chart connections, also safely allowing method chaining
 func (c Charts) Connections(chart string) *ChartConnections {
-	for _, c := range c {
-		if c.ReleaseName == chart {
-			return &c.ChartConnections
-		}
+	if chart, ok := c[chart]; !ok {
+		return &ChartConnections{}
+	} else {
+		return &chart.ChartConnections
 	}
-	return &ChartConnections{}
+}
+
+// Decode is used by envconfig to initialise the custom Charts type with populated values
+// This function will take a JSON object representing charts, and unmarshal it into the existing object to "merge" the
+// two
+func (c Charts) Decode(value string) error {
+	charts := Charts{}
+	if err := json.Unmarshal([]byte(value), &charts); err != nil {
+		return err
+	}
+	return mergo.Merge(&c, charts, mergo.WithOverride)
+}
+
+// OrderedKeys returns an ordered list of the map keys based on the charts Index value
+func (c Charts) OrderedKeys() []string {
+	keys := make([]string, len(c))
+	indexMap := map[int]string{}
+	for key, chart := range c {
+		indexMap[chart.Index] = key
+	}
+	var indexes []int
+	for index := range indexMap {
+		indexes = append(indexes, index)
+	}
+	sort.Ints(indexes)
+	for _, index := range indexes {
+		keys[index] = indexMap[index]
+	}
+	return keys
 }
 
 // DumpConfig dumps config to a file
@@ -46,17 +78,19 @@ func DumpConfig(cfg *Config, path string) error {
 	return nil
 }
 
-// NewEnvironmentFromConfig returns a deployed environment from a given preset that can be ones pre-defined within
+// DeployOrLoadEnvironment returns a deployed environment from a given preset that can be ones pre-defined within
 // the library, or passed in as part of lib usage
-func NewEnvironmentFromConfig(config *Config, chartDirectory string) (*Environment, error) {
-	if len(config.Namespace) > 0 {
-		return LoadEnvironment(config)
+func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+	// Brute force way of allowing the overriding the use of an environment file without a separate function call
+	envFile := os.Getenv("ENVIRONMENT_FILE")
+	if len(envFile) > 0 {
+		return DeployOrLoadEnvironmentFromConfigFile(chartDirectory, envFile)
 	}
-	return DeployEnvironment(config, chartDirectory)
+	return deployOrLoadEnvironment(config, chartDirectory)
 }
 
-// NewEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
-func NewEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment, error) {
+// DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
+func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment, error) {
 	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -65,6 +99,15 @@ func NewEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment
 	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, err
 	}
-	return NewEnvironmentFromConfig(config, chartDirectory)
+	return deployOrLoadEnvironment(config, chartDirectory)
 }
 
+func deployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+	if err := envconfig.Process("", config); err != nil {
+		return nil, err
+	}
+	if len(config.Namespace) > 0 {
+		return LoadEnvironment(config)
+	}
+	return DeployEnvironment(config, chartDirectory)
+}

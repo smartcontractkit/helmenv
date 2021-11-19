@@ -18,11 +18,11 @@ const (
 
 // ChartConnection info about connected pod ports
 type ChartConnection struct {
-	PodName      string         `yaml:"pod_name"`
-	ForwarderPID int            `yaml:"forwarder_pid"`
-	PodIP        string         `yaml:"pod_ip"`
-	Ports        map[string]int `yaml:"ports"`
-	LocalPorts   map[string]int `yaml:"local_port"`
+	PodName      string         `yaml:"pod_name" envconfig:"pod_name"`
+	ForwarderPID int            `yaml:"forwarder_pid" envconfig:"forwarder_pid"`
+	PodIP        string         `yaml:"pod_ip" envconfig:"pod_ip"`
+	Ports        map[string]int `yaml:"ports" envconfig:"ports"`
+	LocalPorts   map[string]int `yaml:"local_port" envconfig:"local_ports"`
 }
 
 // ChartConnections represents a group of pods and their connection info deployed within the same chart

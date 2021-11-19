@@ -33,9 +33,9 @@ type Environment struct {
 	Artifacts *Artifacts
 	Chaos     *chaos.Controller
 
-	charts    []*HelmChart
-	k8sClient *kubernetes.Clientset
-	k8sConfig *rest.Config
+	helmCharts map[string]*HelmChart
+	k8sClient  *kubernetes.Clientset
+	k8sConfig  *rest.Config
 }
 
 // NewEnvironment creates new environment from charts
@@ -45,9 +45,10 @@ func NewEnvironment(config *Config) (*Environment, error) {
 		return nil, err
 	}
 	he := &Environment{
-		Config:    config,
-		k8sClient: ks,
-		k8sConfig: kc,
+		Config:     config,
+		k8sClient:  ks,
+		k8sConfig:  kc,
+		helmCharts: map[string]*HelmChart{},
 	}
 	return he, nil
 }
@@ -62,7 +63,10 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 	if err := e.Init(config.NamespacePrefix); err != nil {
 		return nil, err
 	}
-	for _, chart := range config.Charts {
+	for key, chart := range config.Charts {
+		if len(chart.Path) == 0 {
+			chart.Path = key
+		}
 		if len(chart.ReleaseName) == 0 {
 			chart.ReleaseName = chart.Path
 		}
@@ -113,7 +117,7 @@ func LoadEnvironment(config *Config) (*Environment, error) {
 		if err != nil {
 			return nil, err
 		}
-		environment.charts = append(environment.charts, hc)
+		environment.helmCharts[hc.Name] = hc
 	}
 	return environment, nil
 }
@@ -138,7 +142,7 @@ func (k *Environment) Teardown() error {
 	if err := k.Disconnect(); err != nil {
 		return err
 	}
-	for _, c := range k.charts {
+	for _, c := range k.helmCharts {
 		log.Debug().Str("Release", c.Name).Msg("Uninstalling Helm release")
 		if _, err := action.NewUninstall(c.actionConfig).Run(c.Name); err != nil {
 			return err
@@ -209,7 +213,7 @@ func (k *Environment) SyncConfig() error {
 // Deploy a single chart
 func (k *Environment) Deploy(chartName string) error {
 	var chart *HelmChart
-	for _, c := range k.charts {
+	for _, c := range k.helmCharts {
 		if c.Name == chartName {
 			chart = c
 			break
@@ -223,8 +227,12 @@ func (k *Environment) Deploy(chartName string) error {
 
 // DeployAll deploys all deploy sequence at once
 func (k *Environment) DeployAll() error {
-	for _, c := range k.charts {
-		if err := c.Deploy(); err != nil {
+	for _, key := range k.Charts.OrderedKeys() {
+		chart, ok := k.helmCharts[key]
+		if !ok {
+			continue
+		}
+		if err := chart.Deploy(); err != nil {
 			return err
 		}
 	}
@@ -240,14 +248,14 @@ func (k *Environment) AddChart(chart *Chart) error {
 	if err != nil {
 		return err
 	}
-	k.charts = append(k.charts, hc)
+	k.helmCharts[hc.Name] = hc
 	return nil
 }
 
 // Connect to a single chart
 func (k *Environment) Connect(chartName string) error {
 	var chart *HelmChart
-	for _, c := range k.charts {
+	for _, c := range k.helmCharts {
 		if c.Name == chartName {
 			chart = c
 			break
@@ -261,7 +269,7 @@ func (k *Environment) Connect(chartName string) error {
 
 // ConnectAll connects to all containerPorts for all charts, dump config in JSON if Persistent flag is present
 func (k *Environment) ConnectAll() error {
-	for _, c := range k.charts {
+	for _, c := range k.helmCharts {
 		if err := c.Connect(); err != nil {
 			return err
 		}
@@ -274,7 +282,7 @@ func (k *Environment) ConnectAll() error {
 
 // Disconnect disconnects from all deployed charts, only working in Persistent mode
 func (k *Environment) Disconnect() error {
-	for _, c := range k.charts {
+	for _, c := range k.helmCharts {
 		log.Info().
 			Str("Release", c.Name).
 			Msg("Disconnecting")
