@@ -76,62 +76,16 @@ spec:
             - name: p2p
               containerPort: {{ .Values.chainlink.p2p_port }}
           env:
-            - name: DATABASE_URL
-              value: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
-            - name: DATABASE_NAME
-              value: chainlink
-            - name: ETH_URL
-              value: ws://geth:8546
-            - name: ETH_CHAIN_ID
-              value: "1337"
-            - name: ALLOW_ORIGINS
-              value: '*'
-            - name: CHAINLINK_DEV
-              value: "true"
-            - name: ETH_DISABLED
-              value: "false"
-            - name: FEATURE_EXTERNAL_INITIATORS
-              value: "false"
-            - name: CHAINLINK_PGPASSWORD
-              value: node
-            - name: CHAINLINK_PORT
-              value: "6688"
-            - name: CHAINLINK_TLS_PORT
-              value: "0"
-            - name: DEFAULT_HTTP_ALLOW_UNRESTRICTED_NETWORK_ACCESS
-              value: "true"
-            - name: ENABLE_BULLETPROOF_TX_MANAGER
-              value: "true"
-            - name: FEATURE_OFFCHAIN_REPORTING
-              value: "true"
-            - name: JSON_CONSOLE
-              value: "false"
-            - name: LOG_LEVEL
-              value: debug
-            - name: MAX_EXPORT_HTML_THREADS
-              value: "2"
-            - name: MINIMUM_CONTRACT_PAYMENT_LINK_JUELS
-              value: "0"
-            - name: OCR_TRACE_LOGGING
-              value: "true"
-            - name: P2P_LISTEN_IP
-              value: 0.0.0.0
-            - name: P2P_LISTEN_PORT
-              value: "6690"
-            - name: ROOT
-              value: ./clroot
-            - name: SECURE_COOKIES
-              value: "false"
-            - name: ETH_MAX_IN_FLIGHT_TRANSACTIONS
-              value: "5000"
-            - name: KEEPER_DEFAULT_TRANSACTION_QUEUE_DEPTH
-              value: "1"
-            - name: KEEPER_REGISTRY_SYNC_INTERVAL
-              value: "5s"
-            - name: KEEPER_MINIMUM_REQUIRED_CONFIRMATIONS
-              value: "1"
-            - name: KEEPER_REGISTRY_PERFORM_GAS_OVERHEAD
-              value: "150000"
+          {{- range $key, $value := .Values.env }}
+            {{- if $value }}
+            - name: {{ $key | upper}}
+              {{- if kindIs "string" $value}}
+              value: {{ $value | quote}}
+              {{- else }}
+              value: {{ $value }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: chainlink-config-map
               mountPath: /etc/node-secrets-volume/
