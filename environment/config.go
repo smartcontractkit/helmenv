@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"fmt"
 	"github.com/imdario/mergo"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/smartcontractkit/helmenv/chaos"
@@ -37,9 +38,17 @@ func (c Charts) Connections(chart string) *ChartConnections {
 // This function will take a JSON object representing charts, and unmarshal it into the existing object to "merge" the
 // two
 func (c Charts) Decode(value string) error {
+	// Support the use of files for unmarshaling charts JSON
+	if _, err := os.Stat(value); err == nil {
+		b, err := os.ReadFile(value)
+		if err != nil {
+			return err
+		}
+		value = string(b)
+	}
 	charts := Charts{}
 	if err := json.Unmarshal([]byte(value), &charts); err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal JSON, either a file path specific doesn't exist, or the JSON is invalid: %v", err)
 	}
 	return mergo.Merge(&c, charts, mergo.WithOverride)
 }
