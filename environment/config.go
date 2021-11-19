@@ -2,97 +2,73 @@ package environment
 
 import (
 	"fmt"
-	"github.com/ghodss/yaml"
+	"github.com/imdario/mergo"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/smartcontractkit/helmenv/chaos"
-	"io/ioutil"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/util/json"
 	"os"
-	"strings"
+	"sort"
 )
 
-// TODO: some naming convention in charts must be used to simplify this part for a generic case
-func (cfg *Config) chainlinkClusterURLs() error {
-	cfg.NetworksURLs = map[string]map[string][]string{}
-	cfg.NetworksURLs["chainlink"] = map[string][]string{}
-	cfg.NetworksURLs["chainlink"]["local"] = []string{}
-	cfg.NetworksURLs["chainlink"]["cluster"] = []string{}
-	cfg.NetworksURLs["geth"] = map[string][]string{}
-	cfg.NetworksURLs["mockserver"] = map[string][]string{}
-	cfg.NetworksURLs["mockserver"]["local"] = []string{
-		fmt.Sprintf("http://localhost:%d",
-			cfg.ChartsInfo["mockserver"].ConnectionInfo["mockserver_0_mockserver"].LocalPorts["serviceport"],
-		)}
-	cfg.NetworksURLs["mockserver"]["cluster"] = []string{
-		fmt.Sprintf("http://%s:%d",
-			cfg.ChartsInfo["mockserver"].ConnectionInfo["mockserver_0_mockserver"].PodIP,
-			cfg.ChartsInfo["mockserver"].ConnectionInfo["mockserver_0_mockserver"].Ports["serviceport"],
-		)}
-	chainlinkChart := cfg.ChartsInfo["chainlink"]
-	for ciName, ci := range chainlinkChart.ConnectionInfo {
-		if strings.HasPrefix(ciName, "chainlink-node") && strings.HasSuffix(ciName, "node") {
-			cfg.NetworksURLs["chainlink"]["local"] = append(cfg.NetworksURLs["chainlink"]["local"],
-				fmt.Sprintf("http://localhost:%d", ci.LocalPorts["access"]))
-			cfg.NetworksURLs["chainlink"]["cluster"] = append(cfg.NetworksURLs["chainlink"]["cluster"],
-				fmt.Sprintf("http://%s:%d", ci.PodIP, ci.Ports["access"]))
-		}
-	}
-	gethChart := cfg.ChartsInfo["geth"]
-	cfg.NetworksURLs["geth"]["local"] = append(
-		cfg.NetworksURLs["geth"]["local"],
-		fmt.Sprintf("ws://localhost:%d", gethChart.ConnectionInfo["geth_0_geth-network"].LocalPorts["ws-rpc"]),
-	)
-	return nil
+// Config represents the full configuration of an environment, it can either be defined
+// programmatically at runtime, or defined in files to be used in a CLI or any other application
+type Config struct {
+	Persistent           bool                             `json:"persistent" envconfig:"persistent"`
+	PersistentConnection bool                             `json:"persistent_connection" envconfig:"persistent_connection"`
+	NamespacePrefix      string                           `json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
+	Namespace            string                           `json:"namespace,omitempty" envconfig:"namespace"`
+	Charts               Charts                           `json:"charts,omitempty" envconfig:"charts"`
+	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty" envconfig:"experiments"`
 }
 
-func (cfg *Config) ccipURLs() error {
-	//cfg.NetworksURLs = map[string]map[string][]string{}
-	//chainlinkChart := cfg.ChartsInfo["chainlink"]
-	//reorgChart := cfg.ChartsInfo["geth-reorg"]
-	//terraChart := cfg.ChartsInfo["localterra"]
-	//cfg.NetworksURLs["chainlink"] = []string{}
-	//cfg.NetworksURLs["geth-reorg"] = []string{}
-	//cfg.NetworksURLs["localterra"] = []string{}
-	//cfg.NetworksURLs["chainlink"] = append(
-	//	cfg.NetworksURLs["chainlink"],
-	//	httpURL(chainlinkChart.ConnectionInfo["chainlink-node_0_node"].LocalPorts["access"]),
-	//)
-	//cfg.NetworksURLs["geth-reorg"] = append(
-	//	cfg.NetworksURLs["geth-reorg"],
-	//	wsURL(reorgChart.ConnectionInfo["geth_0_geth"].LocalPorts["ws-rpc"]),
-	//)
-	//cfg.NetworksURLs["geth-reorg"] = append(
-	//	cfg.NetworksURLs["geth-reorg"],
-	//	wsURL(reorgChart.ConnectionInfo["miner-node_0_geth-miner"].LocalPorts["ws-rpc"]),
-	//)
-	//cfg.NetworksURLs["geth-reorg"] = append(
-	//	cfg.NetworksURLs["geth-reorg"],
-	//	wsURL(reorgChart.ConnectionInfo["miner-node_1_geth-miner"].LocalPorts["ws-rpc"]),
-	//)
-	//cfg.NetworksURLs["localterra"] = append(
-	//	cfg.NetworksURLs["localterra"],
-	//	httpURL(terraChart.ConnectionInfo["terrad_0_terrad"].LocalPorts["lcd"]))
-	//cfg.NetworksURLs["localterra"] = append(
-	//	cfg.NetworksURLs["localterra"],
-	//	httpURL(terraChart.ConnectionInfo["terrad_1_terrad"].LocalPorts["lcd"]))
-	return nil
+// Charts represents a map of charts with some helper methods
+type Charts map[string]*Chart
+
+// Connections is a helper method for simply accessing chart connections, also safely allowing method chaining
+func (c Charts) Connections(chart string) *ChartConnections {
+	if chart, ok := c[chart]; !ok {
+		return &ChartConnections{}
+	} else {
+		return &chart.ChartConnections
+	}
 }
 
-// SetDefaults set default values for config
-func (cfg *Config) SetDefaults() {
-	if cfg.ChartsInfo == nil {
-		cfg.ChartsInfo = map[string]*ChartSettings{}
-	}
-	if cfg.KubeCtlProcessName == "" {
-		cfg.KubeCtlProcessName = DefaultKubeCTLProcessPath
-	}
-	if cfg.Preset == nil {
-		cfg.Preset = &Preset{
-			Name:     cfg.Name,
-			Filename: cfg.Name,
+// Decode is used by envconfig to initialise the custom Charts type with populated values
+// This function will take a JSON object representing charts, and unmarshal it into the existing object to "merge" the
+// two
+func (c Charts) Decode(value string) error {
+	// Support the use of files for unmarshaling charts JSON
+	if _, err := os.Stat(value); err == nil {
+		b, err := os.ReadFile(value)
+		if err != nil {
+			return err
 		}
+		value = string(b)
 	}
-	if cfg.Experiments == nil {
-		cfg.Experiments = make(map[string]*chaos.ExperimentInfo)
+	charts := Charts{}
+	if err := json.Unmarshal([]byte(value), &charts); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON, either a file path specific doesn't exist, or the JSON is invalid: %v", err)
 	}
+	return mergo.Merge(&c, charts, mergo.WithOverride)
+}
+
+// OrderedKeys returns an ordered list of the map keys based on the charts Index value
+func (c Charts) OrderedKeys() []string {
+	keys := make([]string, len(c))
+	indexMap := map[int]string{}
+	for key, chart := range c {
+		indexMap[chart.Index] = key
+	}
+	var indexes []int
+	for index := range indexMap {
+		indexes = append(indexes, index)
+	}
+	sort.Ints(indexes)
+	for _, index := range indexes {
+		keys[index] = indexMap[index]
+	}
+	return keys
 }
 
 // DumpConfig dumps config to a file
@@ -111,15 +87,36 @@ func DumpConfig(cfg *Config, path string) error {
 	return nil
 }
 
-// LoadConfig loads config from a file
-func LoadConfig(path string) (*Config, error) {
-	d, err := ioutil.ReadFile(fmt.Sprintf("%s.yaml", path))
+// DeployOrLoadEnvironment returns a deployed environment from a given preset that can be ones pre-defined within
+// the library, or passed in as part of lib usage
+func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+	// Brute force way of allowing the overriding the use of an environment file without a separate function call
+	envFile := os.Getenv("ENVIRONMENT_FILE")
+	if len(envFile) > 0 {
+		return DeployOrLoadEnvironmentFromConfigFile(chartDirectory, envFile)
+	}
+	return deployOrLoadEnvironment(config, chartDirectory)
+}
+
+// DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
+func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment, error) {
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	var cfg *Config
-	if err := yaml.Unmarshal(d, &cfg); err != nil {
+	config := &Config{}
+	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return deployOrLoadEnvironment(config, chartDirectory)
+}
+
+func deployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+	if err := envconfig.Process("", config); err != nil {
+		return nil, err
+	}
+	if len(config.Namespace) > 0 {
+		return LoadEnvironment(config)
+	}
+	return DeployEnvironment(config, chartDirectory)
 }

@@ -17,42 +17,42 @@ envcli -h
 
 Create new environment with a preset
 ```
-envcli -p examples/standalone/chainlink-example-preset n
+envcli new -p examples/standalone/chainlink-example-preset
 ```
 You'll see all deployed charts info are now added to a preset `yaml` file
 
 Now you can connect
 ```
-envcli -p examples/standalone/chainlink-example-preset c
+envcli connect -e examples/standalone/chainlink-example-preset
 ```
 You can see all forwarded ports and get it by name from config now
 
 Dump all the logs and postgres sqls
 ```
-envcli -p chainlink-example-preset d -a test_logs -db chainlink
+envcli dump -e chainlink-example-preset -a test_logs -db chainlink
 ```
 Apply some chaos from template
 ```
-envcli -p examples/standalone/chainlink-example-preset ch a -t examples/standalone/pod-failure-tmpl.yml
+envcli chaos apply -e examples/standalone/chainlink-example-preset -t examples/standalone/pod-failure-tmpl.yml
 ```
 Now you can find running experiment ID in `examples/standalone/chainlink-example-preset`
 
 Remove chaos by id
 ```
-envcli -p examples/standalone/chainlink-example-preset ch s -e ${chaosID}
+envcli chaos stop -p examples/standalone/chainlink-example-preset -c ${chaosID}
 ```
 Clear all chaos if you have multiple experiments running
 ```
-envcli -p examples/standalone/chainlink-example-preset ch c
+envcli chaos clear -e examples/standalone/chainlink-example-preset
 ```
 
 To disconnect use
 ```
-envcli -p examples/standalone/chainlink-example-preset dc
+envcli disconnect -e examples/standalone/chainlink-example-preset
 ```
 To remove env use
 ```
-envcli -p examples/standalone/chainlink-example-preset rm
+envcli remove -e examples/standalone/chainlink-example-preset
 ```
 
 #### Usage as a library
@@ -79,7 +79,7 @@ TODO:
 - [x] Test cli interactions: deploy/connect/disconnect/shutdown
 - [x] Minimal programmatic e2e test for deployments
 - [x] Test port forwarder forking on OS X
-- [ ] Test port forwarder forking on Linux
+- [x] Test port forwarder forking on Linux
 - [ ] More tests with a different charts (services/dns) to check port forwarding
 - [x] Test config interactions and overrides for viper and Helm values
 

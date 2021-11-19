@@ -1,0 +1,8 @@
+namespace_prefix: chainlink
+charts:
+  - path: geth
+  - path: mockserver-config
+  - path: mockserver
+  - path: chainlink
+    override_values:
+      replicaCount: 1
