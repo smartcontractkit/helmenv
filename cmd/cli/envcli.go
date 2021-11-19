@@ -40,12 +40,12 @@ func main() {
 				Flags:   []cli.Flag{presetFlag},
 				Action: func(c *cli.Context) error {
 					preset := c.String("preset")
-					e, err := environment.NewEnvironmentFromPresetFile(tools.ChartsRoot, preset)
+					e, err := environment.NewEnvironmentFromConfigFile(tools.ChartsRoot, preset)
 					if err != nil {
 						return err
 					}
 					log.Info().
-						Str("environmentFile", fmt.Sprintf("%s.yaml", e.Config.NamespaceName)).
+						Str("environmentFile", fmt.Sprintf("%s.yaml", e.Config.NamespacePrefix)).
 						Msg("Environment setup and written to file")
 					return nil
 				},
@@ -57,7 +57,7 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.LoadPersistentEnvironment(environmentPath)
+					e, err := environment.LoadEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -77,7 +77,7 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.LoadPersistentEnvironment(environmentPath)
+					e, err := environment.LoadEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -97,7 +97,7 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.LoadPersistentEnvironment(environmentPath)
+					e, err := environment.LoadEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -133,7 +133,7 @@ func main() {
 					environmentPath := c.String("environment")
 					artifactsDir := c.String("artifacts")
 					dbName := c.String("database")
-					e, err := environment.LoadPersistentEnvironment(environmentPath)
+					e, err := environment.LoadEnvironment(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -163,11 +163,11 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosTemplate := c.String("template")
-							e, err := environment.LoadPersistentEnvironment(environmentPath)
+							e, err := environment.LoadEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}
-							if err = e.ApplyExperimentStandalone(chaosTemplate); err != nil {
+							if err = e.ApplyChaosExperimentFromTemplate(chaosTemplate); err != nil {
 								return err
 							}
 							return nil
@@ -189,7 +189,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosID := c.String("chaos_id")
-							e, err := environment.LoadPersistentEnvironment(environmentPath)
+							e, err := environment.LoadEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}
@@ -197,7 +197,7 @@ func main() {
 							if !ok {
 								return fmt.Errorf("experiment with id %s not found", expInfo.Name)
 							}
-							if err = e.StopExperimentStandalone(expInfo); err != nil {
+							if err = e.StopChaosStandaloneExperiment(expInfo); err != nil {
 								return err
 							}
 							return nil
@@ -210,11 +210,11 @@ func main() {
 						Flags:   []cli.Flag{environmentFlag},
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
-							e, err := environment.LoadPersistentEnvironment(environmentPath)
+							e, err := environment.LoadEnvironment(environmentPath)
 							if err != nil {
 								return err
 							}
-							if err = e.ClearAllStandaloneExperiments(e.Config.Experiments); err != nil {
+							if err = e.ClearAllChaosStandaloneExperiments(e.Config.Experiments); err != nil {
 								return err
 							}
 							return nil

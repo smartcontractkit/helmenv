@@ -2,8 +2,8 @@ package environment
 
 import "github.com/smartcontractkit/helmenv/chaos"
 
-// ClearAllStandaloneExperiments remove all chaos experiments from a presets env
-func (k *Environment) ClearAllStandaloneExperiments(expInfos map[string]*chaos.ExperimentInfo) error {
+// ClearAllChaosStandaloneExperiments remove all chaos experiments from a standalone env
+func (k *Environment) ClearAllChaosStandaloneExperiments(expInfos map[string]*chaos.ExperimentInfo) error {
 	if err := k.Chaos.StopAllStandalone(expInfos); err != nil {
 		return err
 	}
@@ -14,8 +14,8 @@ func (k *Environment) ClearAllStandaloneExperiments(expInfos map[string]*chaos.E
 	return nil
 }
 
-// StopExperimentStandalone stops experiment in a presets env
-func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) error {
+// StopChaosStandaloneExperiment stops experiment in a standalone env
+func (k *Environment) StopChaosStandaloneExperiment(expInfo *chaos.ExperimentInfo) error {
 	if err := k.Chaos.StopStandalone(expInfo); err != nil {
 		return err
 	}
@@ -29,8 +29,8 @@ func (k *Environment) StopExperimentStandalone(expInfo *chaos.ExperimentInfo) er
 	return nil
 }
 
-// ApplyExperimentStandalone applies experiment to a presets env
-func (k *Environment) ApplyExperimentStandalone(tmplPath string) error {
+// ApplyChaosExperimentFromTemplate applies experiment to a standalone env
+func (k *Environment) ApplyChaosExperimentFromTemplate(tmplPath string) error {
 	expInfo, err := k.Chaos.RunTemplate(tmplPath)
 	if err != nil {
 		return err
@@ -42,8 +42,8 @@ func (k *Environment) ApplyExperimentStandalone(tmplPath string) error {
 	return nil
 }
 
-// ApplyExperiment applies experiment to an ephemeral env
-func (k *Environment) ApplyExperiment(exp chaos.Experimentable) (string, error) {
+// ApplyChaosExperiment applies experiment to an ephemeral env
+func (k *Environment) ApplyChaosExperiment(exp chaos.Experimentable) (string, error) {
 	chaosName, err := k.Chaos.Run(exp)
 	if err != nil {
 		return chaosName, err
@@ -51,9 +51,9 @@ func (k *Environment) ApplyExperiment(exp chaos.Experimentable) (string, error) 
 	return chaosName, nil
 }
 
-// StopExperiment stops experiment in a ephemeral env
-func (k *Environment) StopExperiment(chaosName string) error {
-	if err := k.Chaos.Stop(chaosName); err != nil {
+// StopChaosExperiment stops experiment in a ephemeral env
+func (k *Environment) StopChaosExperiment(id string) error {
+	if err := k.Chaos.Stop(id); err != nil {
 		return err
 	}
 	return nil

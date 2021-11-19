@@ -46,10 +46,10 @@ type Chart struct {
 
 // HelmChart helm chart structure
 type HelmChart struct {
+	*Chart
+
 	Name          string
 	NamespaceName string
-
-	settings      *Chart
 	env           *Environment
 	actionConfig  *action.Configuration
 	podsList      *v1.PodList
@@ -61,10 +61,10 @@ func NewHelmChart(env *Environment, chart *Chart) (*HelmChart, error) {
 		chart.ChartConnections = ChartConnections{}
 	}
 	hc := &HelmChart{
+		Chart:         chart,
 		Name:          chart.ReleaseName,
 		env:           env,
-		settings:      chart,
-		NamespaceName: env.Config.NamespaceName,
+		NamespaceName: env.Config.Namespace,
 	}
 	if err := hc.init(); err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func NewHelmChart(env *Environment, chart *Chart) (*HelmChart, error) {
 // Connect connects to all exposed containerPorts, forwards them to local
 func (hc *HelmChart) Connect() error {
 	var rangeErr error
-	hc.settings.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
+	hc.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
 		if chartConnection.ForwarderPID != 0 {
 			log.Info().
 				Str("Pod", chartConnection.PodName).
@@ -146,17 +146,17 @@ func (hc *HelmChart) init() error {
 
 // deployChart deploys the helm Charts
 func (hc *HelmChart) deployChart() error {
-	log.Info().Str("Path", hc.settings.Path).
-		Str("Release", hc.settings.ReleaseName).
+	log.Info().Str("Path", hc.Path).
+		Str("Release", hc.ReleaseName).
 		Str("Namespace", hc.NamespaceName).
-		Interface("Override values", hc.settings.OverrideValues).
+		Interface("Override values", hc.OverrideValues).
 		Msg("Installing Helm chart")
-	chart, err := loader.Load(hc.settings.Path)
+	chart, err := loader.Load(hc.Path)
 	if err != nil {
 		return err
 	}
 
-	chart.Values, err = chartutil.CoalesceValues(chart, hc.settings.OverrideValues)
+	chart.Values, err = chartutil.CoalesceValues(chart, hc.OverrideValues)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (hc *HelmChart) deployChart() error {
 
 	install := action.NewInstall(hc.actionConfig)
 	install.Namespace = hc.NamespaceName
-	install.ReleaseName = hc.settings.ReleaseName
+	install.ReleaseName = hc.ReleaseName
 	install.Timeout = HelmInstallTimeout
 	// blocks until all podsPortsInfo are healthy
 	install.Wait = true
@@ -174,8 +174,8 @@ func (hc *HelmChart) deployChart() error {
 	}
 	log.Info().
 		Str("Namespace", hc.NamespaceName).
-		Str("Release", hc.settings.ReleaseName).
-		Str("Chart", hc.settings.Path).
+		Str("Release", hc.ReleaseName).
+		Str("Chart", hc.Path).
 		Msg("Successfully installed helm chart")
 	return nil
 }
@@ -184,7 +184,7 @@ func (hc *HelmChart) fetchPods() error {
 	var err error
 	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.NamespaceName)
 	hc.podsList, err = k8sPods.List(context.Background(), metaV1.ListOptions{
-		LabelSelector: fmt.Sprintf("release=%s", hc.settings.ReleaseName),
+		LabelSelector: fmt.Sprintf("release=%s", hc.ReleaseName),
 	})
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func (hc *HelmChart) updateChartSettings() error {
 			for _, port := range c.Ports {
 				pm[port.Name] = int(port.ContainerPort)
 			}
-			if err := hc.settings.ChartConnections.Store(app, instance, c.Name, &ChartConnection{
+			if err := hc.ChartConnections.Store(app, instance, c.Name, &ChartConnection{
 				PodName:    p.Name,
 				PodIP:      p.Status.PodIP,
 				Ports:      pm,
@@ -315,7 +315,7 @@ func (k *Environment) runProcessForwarder(podName string, portRules []string) (i
 	processArgs := []string{
 		kubectlPath,
 		"-n",
-		k.Config.NamespaceName,
+		k.Config.Namespace,
 		"port-forward",
 		fmt.Sprintf("%s/%s", "pods", podName),
 	}
@@ -339,7 +339,7 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", k.Config.NamespaceName, podName)
+	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", k.Config.Namespace, podName)
 	hostIP := strings.TrimLeft(k.k8sConfig.Host, "htps:/")
 	serverURL := url.URL{Scheme: "https", Path: path, Host: hostIP}
 

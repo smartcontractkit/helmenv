@@ -26,7 +26,7 @@ type Artifacts struct {
 
 // NewArtifacts create new artifacts instance for provided environment
 func NewArtifacts(env *Environment) (*Artifacts, error) {
-	podsClient := env.k8sClient.CoreV1().Pods(env.Config.NamespaceName)
+	podsClient := env.k8sClient.CoreV1().Pods(env.Config.NamespacePrefix)
 	return &Artifacts{
 		env:        env,
 		podsClient: podsClient,
@@ -52,7 +52,7 @@ func (a *Artifacts) writePodArtifacts(testDir string) error {
 	podsList, err := a.podsClient.List(context.Background(), metaV1.ListOptions{})
 	if err != nil {
 		log.Err(err).
-			Str("Namespace", a.env.Config.NamespaceName).
+			Str("Namespace", a.env.Config.NamespacePrefix).
 			Msg("Error retrieving pod list from K8s environment")
 	}
 	for _, pod := range podsList.Items {
@@ -68,7 +68,7 @@ func (a *Artifacts) writePodArtifacts(testDir string) error {
 		err = a.writePodLogs(pod, appDir)
 		if err != nil {
 			log.Err(err).
-				Str("Namespace", a.env.Config.NamespaceName).
+				Str("Namespace", a.env.Config.NamespacePrefix).
 				Str("Pod", pod.Name).
 				Msg("Error writing logs for pod")
 		}

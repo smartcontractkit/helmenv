@@ -3,30 +3,31 @@ package environment
 import (
 	"github.com/smartcontractkit/helmenv/chaos"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"os"
 )
 
-// Config environment config with all charts info,
-// it is used both in runtime and can be persistent in JSON
+// Config represents the full configuration of an environment, it can either be defined
+// programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
 	Persistent           bool                             `json:"persistent"`
 	PersistentConnection bool                             `json:"persistent_connection"`
-	NamespaceName        string                           `json:"namespace_name,omitempty"`
+	NamespacePrefix      string                           `json:"namespace_prefix,omitempty"`
+	Namespace            string                           `json:"namespace,omitempty"`
 	Charts               Charts                           `json:"charts,omitempty"`
 	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty"`
 }
 
-// Charts represents a map of charts with some helper methods
-type Charts map[string]*Chart
+// Charts represents a series of charts with some helper methods
+type Charts []*Chart
 
 // Connections is a helper method for simply accessing chart connections, also safely allowing method chaining
 func (c Charts) Connections(chart string) *ChartConnections {
-	if chart, ok := c[chart]; !ok {
-		return &ChartConnections{}
-	} else {
-		return &chart.ChartConnections
+	for _, c := range c {
+		if c.ReleaseName == chart {
+			return &c.ChartConnections
+		}
 	}
+	return &ChartConnections{}
 }
 
 // DumpConfig dumps config to a file
@@ -45,15 +46,25 @@ func DumpConfig(cfg *Config, path string) error {
 	return nil
 }
 
-// LoadConfig loads config from a file
-func LoadConfig(path string) (*Config, error) {
-	d, err := ioutil.ReadFile(path)
+// NewEnvironmentFromConfig returns a deployed environment from a given preset that can be ones pre-defined within
+// the library, or passed in as part of lib usage
+func NewEnvironmentFromConfig(config *Config, chartDirectory string) (*Environment, error) {
+	if len(config.Namespace) > 0 {
+		return LoadEnvironment(config)
+	}
+	return DeployEnvironment(config, chartDirectory)
+}
+
+// NewEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
+func NewEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment, error) {
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	var cfg *Config
-	if err := yaml.Unmarshal(d, &cfg); err != nil {
+	config := &Config{}
+	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return NewEnvironmentFromConfig(config, chartDirectory)
 }
+

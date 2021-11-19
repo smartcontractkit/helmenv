@@ -13,11 +13,8 @@ func init() {
 }
 
 func main() {
-	e, err := environment.NewEnvironmentFromPreset(
-		&environment.Config{
-			Persistent: false,
-		},
-		environment.NewChainlinkPreset(nil),
+	e, err := environment.NewEnvironmentFromConfig(
+		environment.NewChainlinkConfig(nil),
 		tools.ChartsRoot,
 	)
 	if err != nil {

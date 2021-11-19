@@ -14,11 +14,8 @@ func init() {
 }
 
 func main() {
-	e, err := environment.NewEnvironmentFromPreset(
-		&environment.Config{
-			Persistent: false,
-		},
-		environment.NewChainlinkPreset(nil),
+	e, err := environment.NewEnvironmentFromConfig(
+		environment.NewChainlinkConfig(nil),
 		tools.ChartsRoot,
 	)
 	if err != nil {
@@ -33,7 +30,7 @@ func main() {
 	}
 
 	logger := log.Info()
-	urls, err := e.Config.Charts.Connections("geth").LocalWSURLs("ws-rpc")
+	urls, err := e.Config.Charts.Connections("geth").LocalURLsByPort("ws-rpc", environment.WS)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return

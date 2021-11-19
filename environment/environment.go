@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -27,9 +29,9 @@ const (
 
 // Environment build and deployed from several helm Charts
 type Environment struct {
+	*Config
 	Artifacts *Artifacts
 	Chaos     *chaos.Controller
-	Config    *Config
 
 	charts    []*HelmChart
 	k8sClient *kubernetes.Clientset
@@ -42,15 +44,78 @@ func NewEnvironment(config *Config) (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-	if config.Charts == nil {
-		config.Charts = map[string]*Chart{}
-	}
 	he := &Environment{
 		Config:    config,
 		k8sClient: ks,
 		k8sConfig: kc,
 	}
 	return he, nil
+}
+
+// DeployEnvironment returns a deployed environment from a given config that can be pre-defined within
+// the library, or passed in as part of lib usage
+func DeployEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+	e, err := NewEnvironment(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := e.Init(config.NamespacePrefix); err != nil {
+		return nil, err
+	}
+	for _, chart := range config.Charts {
+		if len(chart.ReleaseName) == 0 {
+			chart.ReleaseName = chart.Path
+		}
+		if len(chartDirectory) > 0 {
+			chart.Path = path.Join(chartDirectory, chart.Path)
+		}
+		if err := e.AddChart(chart); err != nil {
+			return nil, err
+		}
+	}
+	if err := e.DeployAll(); err != nil {
+		log.Error().Err(err).Msg("Error while deploying the environment")
+		if err := e.Teardown(); err != nil {
+			return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		}
+		return nil, err
+	}
+	return e, e.SyncConfig()
+}
+
+// LoadEnvironment loads an already deployed environment from config
+func LoadEnvironment(config *Config) (*Environment, error) {
+	log.Info().
+		Interface("Settings", config).
+		Msg("Loading environment")
+	environment, err := NewEnvironment(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := environment.configureHelm(); err != nil {
+		return nil, err
+	}
+	artifacts, err := NewArtifacts(environment)
+	if err != nil {
+		return nil, err
+	}
+	environment.Artifacts = artifacts
+	cc, err := chaos.NewController(&chaos.Config{
+		Client:        environment.k8sClient,
+		NamespaceName: config.Namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+	environment.Chaos = cc
+	for _, chart := range environment.Config.Charts {
+		hc, err := NewHelmChart(environment, chart)
+		if err != nil {
+			return nil, err
+		}
+		environment.charts = append(environment.charts, hc)
+	}
+	return environment, nil
 }
 
 // GetLocalK8sDeps get local k8s connection deps
@@ -110,7 +175,7 @@ func (k *Environment) Init(namespacePrefix string) error {
 	k.Artifacts = a
 	cc, err := chaos.NewController(&chaos.Config{
 		Client:        k.k8sClient,
-		NamespaceName: k.Config.NamespaceName,
+		NamespaceName: k.Config.Namespace,
 	})
 	if err != nil {
 		return err
@@ -123,9 +188,9 @@ func (k *Environment) Init(namespacePrefix string) error {
 func (k *Environment) RemoveConfigConnectionInfo() error {
 	if k.Config.Persistent {
 		k.Config.Charts = nil
-		k.Config.NamespaceName = ""
+		k.Config.Namespace = ""
 	}
-	if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.NamespaceName)); err != nil {
+	if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Namespace)); err != nil {
 		return err
 	}
 	return nil
@@ -134,7 +199,7 @@ func (k *Environment) RemoveConfigConnectionInfo() error {
 // SyncConfig dumps config in Persistent mode
 func (k *Environment) SyncConfig() error {
 	if k.Config.Persistent {
-		if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.NamespaceName)); err != nil {
+		if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Namespace)); err != nil {
 			return err
 		}
 	}
@@ -171,7 +236,6 @@ func (k *Environment) DeployAll() error {
 
 // AddChart adds chart to deploy
 func (k *Environment) AddChart(chart *Chart) error {
-	k.Config.Charts[chart.ReleaseName] = chart
 	hc, err := NewHelmChart(k, chart)
 	if err != nil {
 		return err
@@ -215,7 +279,7 @@ func (k *Environment) Disconnect() error {
 			Str("Release", c.Name).
 			Msg("Disconnecting")
 		var rangeErr error
-		c.settings.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
+		c.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
 			if err := k.killForwarder(chartConnection.ForwarderPID); err != nil {
 				rangeErr = err
 				return false
@@ -232,45 +296,6 @@ func (k *Environment) Disconnect() error {
 		return err
 	}
 	return nil
-}
-
-// LoadPersistentEnvironment loads environment from config
-func LoadPersistentEnvironment(filePath string) (*Environment, error) {
-	cfg, err := LoadConfig(filePath)
-	if err != nil {
-		return nil, err
-	}
-	log.Info().
-		Interface("Settings", cfg).
-		Msg("Loading environment")
-	environment, err := NewEnvironment(cfg)
-	if err != nil {
-		return nil, err
-	}
-	if err := environment.configureHelm(); err != nil {
-		return nil, err
-	}
-	artifacts, err := NewArtifacts(environment)
-	if err != nil {
-		return nil, err
-	}
-	environment.Artifacts = artifacts
-	cc, err := chaos.NewController(&chaos.Config{
-		Client:        environment.k8sClient,
-		NamespaceName: cfg.NamespaceName,
-	})
-	if err != nil {
-		return nil, err
-	}
-	environment.Chaos = cc
-	for _, chart := range environment.Config.Charts {
-		hc, err := NewHelmChart(environment, chart)
-		if err != nil {
-			return nil, err
-		}
-		environment.charts = append(environment.charts, hc)
-	}
-	return environment, nil
 }
 
 // GetSecretField retrieves field data from k8s secret
@@ -297,13 +322,13 @@ func (k *Environment) createNamespace(namespacePrefix string) error {
 	if err != nil {
 		return err
 	}
-	k.Config.NamespaceName = ns.Name
-	log.Info().Str("Namespace", k.Config.NamespaceName).Msg("Created namespace")
+	k.Config.Namespace = ns.Name
+	log.Info().Str("Namespace", k.Config.Namespace).Msg("Created namespace")
 	return nil
 }
 
 func (k *Environment) configureHelm() error {
-	if err := os.Setenv("HELM_NAMESPACE", k.Config.NamespaceName); err != nil {
+	if err := os.Setenv("HELM_NAMESPACE", k.Config.Namespace); err != nil {
 		return err
 	}
 	settings := cli.New()
@@ -317,11 +342,11 @@ func (k *Environment) configureHelm() error {
 
 func (k *Environment) removeNamespace() error {
 	log.Info().
-		Str("Namespace", k.Config.NamespaceName).
+		Str("Namespace", k.Config.Namespace).
 		Msg("Shutting down environment")
 	if err := k.k8sClient.CoreV1().Namespaces().Delete(
 		context.Background(),
-		k.Config.NamespaceName,
+		k.Config.Namespace,
 		metaV1.DeleteOptions{},
 	); err != nil {
 		return err

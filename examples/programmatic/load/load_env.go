@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/environment"
@@ -14,11 +13,8 @@ func init() {
 }
 
 func main() {
-	e, err := environment.NewEnvironmentFromPreset(
-		&environment.Config{
-			Persistent: true,
-		},
-		environment.NewChainlinkPreset(nil),
+	e, err := environment.NewEnvironmentFromConfig(
+		environment.NewChainlinkConfig(nil),
 		tools.ChartsRoot,
 	)
 	if err != nil {
@@ -27,7 +23,7 @@ func main() {
 	}
 	defer e.DeferTeardown()
 
-	loadedEnv, err := environment.LoadPersistentEnvironment(fmt.Sprintf("%s.yaml", e.Config.NamespaceName))
+	loadedEnv, err := environment.LoadEnvironment(e.Config)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
@@ -38,14 +34,14 @@ func main() {
 		log.Error().Msg(err.Error())
 		return
 	}
-	remoteURLs, err := loadedEnv.Config.Charts.Connections("geth").RemoteHTTPURLs("http-rpc")
+	remoteURLs, err := loadedEnv.Charts.Connections("geth").RemoteURLsByPort("http-rpc", environment.HTTP)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
 	}
 	log.Info().Interface("URLs", remoteURLs).Msg("Remote Geth")
 
-	localURLs, err := loadedEnv.Config.Charts.Connections("geth").LocalHTTPURLs("http-rpc")
+	localURLs, err := loadedEnv.Charts.Connections("geth").LocalURLsByPort("http-rpc", environment.HTTP)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return

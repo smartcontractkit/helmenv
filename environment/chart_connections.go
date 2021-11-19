@@ -2,8 +2,28 @@ package environment
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"net/url"
 )
+
+// Protocol represents a URL scheme to use when fetching connection details
+type Protocol int
+
+const (
+	WS Protocol = iota
+	WSS
+	HTTP
+	HTTPS
+)
+
+// ChartConnection info about connected pod ports
+type ChartConnection struct {
+	PodName      string         `yaml:"pod_name"`
+	ForwarderPID int            `yaml:"forwarder_pid"`
+	PodIP        string         `yaml:"pod_ip"`
+	Ports        map[string]int `yaml:"ports"`
+	LocalPorts   map[string]int `yaml:"local_port"`
+}
 
 // ChartConnections represents a group of pods and their connection info deployed within the same chart
 type ChartConnections map[string]*ChartConnection
@@ -22,9 +42,7 @@ func (cc ChartConnections) Range(f func(key string, chartConnection *ChartConnec
 func (cc ChartConnections) Store(app, instance, name string, chartConnection *ChartConnection) error {
 	mapKey := cc.mapKey(app, instance, name)
 	if _, ok := cc[mapKey]; ok {
-		return fmt.Errorf(
-			"chart connection key of '%s' is already stored in the map", cc.mapKey(app, instance, name),
-		)
+		return fmt.Errorf("chart connection key of '%s' is already stored in the map", mapKey)
 	}
 	cc[mapKey] = chartConnection
 	return nil
@@ -34,9 +52,7 @@ func (cc ChartConnections) Store(app, instance, name string, chartConnection *Ch
 func (cc ChartConnections) Load(app, instance, name string) (*ChartConnection, error) {
 	mapKey := cc.mapKey(app, instance, name)
 	if _, ok := cc[mapKey]; !ok {
-		return nil, fmt.Errorf(
-			"chart connection by the key of '%s' doesn't exist", cc.mapKey(app, instance, name),
-		)
+		return nil, fmt.Errorf("chart connection by the key of '%s' doesn't exist", mapKey)
 	}
 	return cc[mapKey], nil
 }
@@ -75,92 +91,54 @@ func (cc *ChartConnections) LoadByPortName(portName string) ([]*ChartConnection,
 	return connections, nil
 }
 
-// RemoteHTTPURLsByPort scans all the connections returns remote URLs based on a port number of a service
-func (cc *ChartConnections) RemoteHTTPURLsByPort(port int) ([]*url.URL, error) {
-	return cc.RemoteURLsByPort("http://%s:%d", port)
-}
-
-// RemoteWSURLsByPort scans all the connections returns remote URLs based on a port number of a service
-func (cc *ChartConnections) RemoteWSURLsByPort(port int) ([]*url.URL, error) {
-	return cc.RemoteURLsByPort("ws://%s:%d", port)
-}
-
-// RemoteURLsByPort scans all the connections returns remote URLs based on a port number of a service and a string directive
-func (cc *ChartConnections) RemoteURLsByPort(stringDirective string, port int) ([]*url.URL, error) {
-	var urls []*url.URL
-	connections, err := cc.LoadByPort(port)
-	if err != nil {
-		return urls, err
+// RemoteURLsByPort returns parsed URLs of a remote service based on the port name
+func (cc *ChartConnections) RemoteURLsByPort(portName string, protocol Protocol) ([]*url.URL, error) {
+	switch protocol {
+	case WS:
+		return cc.RemoteURLs("ws://%s:%d", portName)
+	case WSS:
+		return cc.RemoteURLs("wss://%s:%d", portName)
+	case HTTP:
+		return cc.RemoteURLs("http://%s:%d", portName)
+	case HTTPS:
+		return cc.RemoteURLs("https://%s:%d", portName)
+	default:
+		return nil, errors.New("no such protocol")
 	}
-	for _, connection := range connections {
-		for _, remotePort := range connection.Ports {
-			if remotePort == port {
-				parsedURL, _ := url.Parse(fmt.Sprintf(stringDirective, connection.PodIP, remotePort))
-				urls = append(urls, parsedURL)
-			}
-		}
-	}
-	return urls, nil
 }
 
-// LocalHTTPURLsByPort scans all the connections returns local URLs based on a remote port number of a service
-func (cc *ChartConnections) LocalHTTPURLsByPort(port int) ([]*url.URL, error) {
-	return cc.LocalURLsByPort("http://%s:%d", port)
-}
-
-// LocalWSURLsByPort scans all the connections returns local URLs based on a remote port number of a service
-func (cc *ChartConnections) LocalWSURLsByPort(port int) ([]*url.URL, error) {
-	return cc.LocalURLsByPort("ws://%s:%d", port)
-}
-
-// LocalURLsByPort scans all the connections returns remote URLs based on a port number of a service and a string directive
-func (cc *ChartConnections) LocalURLsByPort(stringDirective string, port int) ([]*url.URL, error) {
-	var urls []*url.URL
-	connections, err := cc.LoadByPort(port)
-	if err != nil {
+// RemoteURLByPort returns a parsed URL of a remote service based on the port name
+func (cc *ChartConnections) RemoteURLByPort(portName string, protocol Protocol) (*url.URL, error) {
+	if urls, err := cc.RemoteURLsByPort(portName, protocol); err != nil {
 		return nil, err
+	} else {
+		return urls[0], nil
 	}
-	for _, connection := range connections {
-		for k, remotePort := range connection.Ports {
-			if remotePort == port {
-				localPort, ok := connection.LocalPorts[k]
-				if !ok {
-					return urls, fmt.Errorf("local port for service doesn't exist, must not be connected")
-				}
-				parsedURL, _ := url.Parse(fmt.Sprintf(stringDirective, connection.PodIP, localPort))
-				urls = append(urls, parsedURL)
-			}
-		}
+}
+
+// LocalURLsByPort returns parsed URLs of a local port-forwarded service based on the port name
+func (cc *ChartConnections) LocalURLsByPort(portName string, protocol Protocol) ([]*url.URL, error) {
+	switch protocol {
+	case WS:
+		return cc.LocalURLs("ws://localhost:%d", portName)
+	case WSS:
+		return cc.LocalURLs("wss://localhost:%d", portName)
+	case HTTP:
+		return cc.LocalURLs("http://localhost:%d", portName)
+	case HTTPS:
+		return cc.LocalURLs("https://localhost:%d", portName)
+	default:
+		return nil, errors.New("no such protocol")
 	}
-	return urls, nil
 }
 
-// RemoteHTTPURLs scans all the connections returns remote URLs based on a port name of a service
-func (cc *ChartConnections) RemoteHTTPURLs(portName string) ([]*url.URL, error) {
-	return cc.RemoteURLs("http://%s:%d", portName)
-}
-
-// RemoteWSURLs scans all the connections returns remote URLs based on a port name of a service
-func (cc *ChartConnections) RemoteWSURLs(portName string) ([]*url.URL, error) {
-	return cc.RemoteURLs("ws://%s:%d", portName)
-}
-
-// RemoteHTTPURL scans all the connections returns remote URLs based on a port name of a service
-func (cc *ChartConnections) RemoteHTTPURL(portName string) (*url.URL, error) {
-	urls, err := cc.RemoteURLs("http://%s:%d", portName)
-	if err != nil {
+// LocalURLByPort returns a parsed URL of a local port-forwarded service based on the port name
+func (cc *ChartConnections) LocalURLByPort(portName string, protocol Protocol) (*url.URL, error) {
+	if urls, err := cc.LocalURLsByPort(portName, protocol); err != nil {
 		return nil, err
+	} else {
+		return urls[0], nil
 	}
-	return urls[0], err
-}
-
-// RemoteWSURL scans all the connections returns remote URLs based on a port name of a service
-func (cc *ChartConnections) RemoteWSURL(portName string) (*url.URL, error) {
-	urls, err := cc.RemoteURLs("ws://%s:%d", portName)
-	if err != nil {
-		return nil, err
-	}
-	return urls[0], err
 }
 
 // RemoteURLs scans all the connections returns remote URLs based on a port number of a service and a string directive
@@ -173,40 +151,15 @@ func (cc *ChartConnections) RemoteURLs(stringDirective string, portName string) 
 	for _, connection := range connections {
 		for remotePortName, remotePort := range connection.Ports {
 			if remotePortName == portName {
-				parsedURL, _ := url.Parse(fmt.Sprintf(stringDirective, connection.PodIP, remotePort))
+				parsedURL, err := url.Parse(fmt.Sprintf(stringDirective, connection.PodIP, remotePort))
+				if err != nil {
+					return nil, err
+				}
 				urls = append(urls, parsedURL)
 			}
 		}
 	}
 	return urls, nil
-}
-
-// LocalHTTPURLs scans all the connections returns local URLs based on a remote port name of a service
-func (cc *ChartConnections) LocalHTTPURLs(portName string) ([]*url.URL, error) {
-	return cc.LocalURLs("http://localhost:%d", portName)
-}
-
-// LocalWSURLs scans all the connections returns local URLs based on a remote port name of a service
-func (cc *ChartConnections) LocalWSURLs(portName string) ([]*url.URL, error) {
-	return cc.LocalURLs("ws://localhost:%d", portName)
-}
-
-// LocalHTTPURL scans all the connections returns local URL based on a remote port name of a service
-func (cc *ChartConnections) LocalHTTPURL(portName string) (*url.URL, error) {
-	urls, err := cc.LocalURLs("http://localhost:%d", portName)
-	if err != nil {
-		return nil, err
-	}
-	return urls[0], nil
-}
-
-// LocalWSURL scans all the connections returns local URL based on a remote port name of a service
-func (cc *ChartConnections) LocalWSURL(portName string) (*url.URL, error) {
-	urls, err := cc.LocalURLs("ws://localhost:%d", portName)
-	if err != nil {
-		return nil, err
-	}
-	return urls[0], nil
 }
 
 // LocalURLs scans all the connections returns remote URLs based on a port number of a service and a string directive
@@ -223,7 +176,10 @@ func (cc *ChartConnections) LocalURLs(stringDirective string, portName string) (
 				if !ok {
 					return urls, fmt.Errorf("local port for service doesn't exist, must not be connected")
 				}
-				parsedURL, _ := url.Parse(fmt.Sprintf(stringDirective, localPort))
+				parsedURL, err := url.Parse(fmt.Sprintf(stringDirective, localPort))
+				if err != nil {
+					return nil, err
+				}
 				urls = append(urls, parsedURL)
 			}
 		}
@@ -233,13 +189,4 @@ func (cc *ChartConnections) LocalURLs(stringDirective string, portName string) (
 
 func (cc *ChartConnections) mapKey(app, instance, name string) string {
 	return fmt.Sprintf("%s_%s_%s", app, instance, name)
-}
-
-// ChartConnection info about connected pod ports
-type ChartConnection struct {
-	PodName      string         `yaml:"pod_name"`
-	ForwarderPID int            `yaml:"forwarder_pid"`
-	PodIP        string         `yaml:"pod_ip"`
-	Ports        map[string]int `yaml:"ports"`
-	LocalPorts   map[string]int `yaml:"local_port"`
 }

@@ -15,11 +15,8 @@ func init() {
 }
 
 func main() {
-	e, err := environment.NewEnvironmentFromPreset(
-		&environment.Config{
-			Persistent: false,
-		},
-		environment.NewChainlinkPreset(nil),
+	e, err := environment.NewEnvironmentFromConfig(
+		environment.NewChainlinkConfig(nil),
 		tools.ChartsRoot,
 	)
 	if err != nil {
@@ -29,7 +26,7 @@ func main() {
 	defer e.DeferTeardown()
 
 	time.Sleep(10 * time.Second)
-	_, err = e.ApplyExperiment(&experiments.PodFailure{
+	_, err = e.ApplyChaosExperiment(&experiments.PodFailure{
 		LabelKey:   "app",
 		LabelValue: "chainlink-node",
 		Duration:   10 * time.Second,
