@@ -18,11 +18,10 @@ const (
 
 // ChartConnection info about connected pod ports
 type ChartConnection struct {
-	PodName      string         `yaml:"pod_name" envconfig:"pod_name"`
-	ForwarderPID int            `yaml:"forwarder_pid" envconfig:"forwarder_pid"`
-	PodIP        string         `yaml:"pod_ip" envconfig:"pod_ip"`
-	Ports        map[string]int `yaml:"ports" envconfig:"ports"`
-	LocalPorts   map[string]int `yaml:"local_port" envconfig:"local_ports"`
+	PodName     string         `yaml:"pod_name,omitempty" json:"pod_name" envconfig:"pod_name"`
+	PodIP       string         `yaml:"pod_ip,omitempty" json:"pod_ip" envconfig:"pod_ip"`
+	RemotePorts map[string]int `yaml:"remote_ports,omitempty" json:"remote_ports" envconfig:"remote_ports"`
+	LocalPorts  map[string]int `yaml:"local_ports,omitempty" json:"local_ports" envconfig:"local_ports"`
 }
 
 // ChartConnections represents a group of pods and their connection info deployed within the same chart
@@ -61,7 +60,7 @@ func (cc ChartConnections) Load(app, instance, name string) (*ChartConnection, e
 func (cc *ChartConnections) LoadByPort(port int) ([]*ChartConnection, error) {
 	var connections []*ChartConnection
 	cc.Range(func(_ string, chartConnection *ChartConnection) bool {
-		for _, podPort := range chartConnection.Ports {
+		for _, podPort := range chartConnection.RemotePorts {
 			if port == podPort {
 				connections = append(connections, chartConnection)
 			}
@@ -78,7 +77,7 @@ func (cc *ChartConnections) LoadByPort(port int) ([]*ChartConnection, error) {
 func (cc *ChartConnections) LoadByPortName(portName string) ([]*ChartConnection, error) {
 	var connections []*ChartConnection
 	cc.Range(func(_ string, chartConnection *ChartConnection) bool {
-		for remotePortName, _ := range chartConnection.Ports {
+		for remotePortName, _ := range chartConnection.RemotePorts {
 			if remotePortName == portName {
 				connections = append(connections, chartConnection)
 			}
@@ -149,7 +148,7 @@ func (cc *ChartConnections) RemoteURLs(stringDirective string, portName string) 
 		return urls, err
 	}
 	for _, connection := range connections {
-		for remotePortName, remotePort := range connection.Ports {
+		for remotePortName, remotePort := range connection.RemotePorts {
 			if remotePortName == portName {
 				parsedURL, err := url.Parse(fmt.Sprintf(stringDirective, connection.PodIP, remotePort))
 				if err != nil {
@@ -170,7 +169,7 @@ func (cc *ChartConnections) LocalURLs(stringDirective string, portName string) (
 		return nil, err
 	}
 	for _, connection := range connections {
-		for remotePortName := range connection.Ports {
+		for remotePortName := range connection.RemotePorts {
 			if remotePortName == portName {
 				localPort, ok := connection.LocalPorts[remotePortName]
 				if !ok {

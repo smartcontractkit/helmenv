@@ -19,9 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -36,54 +34,35 @@ const (
 	InstanceEnumerationLabelKey = "instance"
 )
 
-// Chart represents a single Helm chart to be installed into a cluster
-type Chart struct {
-	ReleaseName      string                 `json:"release_name,omitempty" envconfig:"release_name"`
-	Path             string                 `json:"path,omitempty" envconfig:"path"`
-	Values           map[string]interface{} `json:"values,omitempty" envconfig:"values"`
-	Index            int                    `json:"index,omitempty" envconfig:"index"`
-	ChartConnections ChartConnections       `json:"chart_connections,omitempty" envconfig:"chart_connections"`
-}
-
-// HelmChart helm chart structure
+// HelmChart represents a single Helm chart to be installed into a cluster
 type HelmChart struct {
-	*Chart
+	ReleaseName      string                 `yaml:"release_name,omitempty" json:"release_name,omitempty" envconfig:"release_name"`
+	Path             string                 `yaml:"path,omitempty" json:"path,omitempty" envconfig:"path"`
+	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty" envconfig:"values"`
+	Index            int                    `yaml:"index,omitempty" json:"index,omitempty" envconfig:"index"`
+	ChartConnections ChartConnections       `yaml:"chart_connections,omitempty" json:"chart_connections,omitempty" envconfig:"chart_connections"`
 
-	Name          string
-	NamespaceName string
+	// Internal properties used for deployment
+	namespaceName string
 	env           *Environment
 	actionConfig  *action.Configuration
 	podsList      *v1.PodList
 }
 
-// NewHelmChart creates a new Helm chart wrapper
-func NewHelmChart(env *Environment, chart *Chart) (*HelmChart, error) {
-	if chart.ChartConnections == nil {
-		chart.ChartConnections = ChartConnections{}
+// Init sets up the connection to helm for the chart to be managed
+func (hc *HelmChart) Init(env *Environment) error {
+	if hc.ChartConnections == nil {
+		hc.ChartConnections = ChartConnections{}
 	}
-	hc := &HelmChart{
-		Chart:         chart,
-		Name:          chart.ReleaseName,
-		env:           env,
-		NamespaceName: env.Config.Namespace,
-	}
-	if err := hc.init(); err != nil {
-		return nil, err
-	}
-	return hc, nil
+	hc.env = env
+	hc.namespaceName = env.Namespace
+	return hc.init()
 }
 
 // Connect connects to all exposed containerPorts, forwards them to local
 func (hc *HelmChart) Connect() error {
 	var rangeErr error
 	hc.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
-		if chartConnection.ForwarderPID != 0 {
-			log.Info().
-				Str("Pod", chartConnection.PodName).
-				Interface("Ports", chartConnection.LocalPorts).
-				Msg("Already connected")
-			return true
-		}
 		rules, err := hc.makePortRules(chartConnection)
 		if err != nil {
 			rangeErr = err
@@ -134,8 +113,8 @@ func (hc *HelmChart) init() error {
 	}
 	hc.actionConfig = &action.Configuration{}
 	if err := hc.actionConfig.Init(
-		kube.GetConfig(kubeConfigPath, "", hc.NamespaceName),
-		hc.NamespaceName,
+		kube.GetConfig(kubeConfigPath, "", hc.namespaceName),
+		hc.namespaceName,
 		os.Getenv("HELM_DRIVER"),
 		func(format string, v ...interface{}) {
 			log.Debug().Str("LogType", "Helm").Msg(fmt.Sprintf(format, v...))
@@ -149,7 +128,7 @@ func (hc *HelmChart) init() error {
 func (hc *HelmChart) deployChart() error {
 	log.Info().Str("Path", hc.Path).
 		Str("Release", hc.ReleaseName).
-		Str("Namespace", hc.NamespaceName).
+		Str("Namespace", hc.namespaceName).
 		Interface("Override values", hc.Values).
 		Msg("Installing Helm chart")
 	chart, err := loader.Load(hc.Path)
@@ -164,7 +143,7 @@ func (hc *HelmChart) deployChart() error {
 	log.Debug().Interface("Values", chart.Values).Msg("Merged chart values")
 
 	install := action.NewInstall(hc.actionConfig)
-	install.Namespace = hc.NamespaceName
+	install.Namespace = hc.namespaceName
 	install.ReleaseName = hc.ReleaseName
 	install.Timeout = HelmInstallTimeout
 	// blocks until all podsPortsInfo are healthy
@@ -174,16 +153,16 @@ func (hc *HelmChart) deployChart() error {
 		return err
 	}
 	log.Info().
-		Str("Namespace", hc.NamespaceName).
+		Str("Namespace", hc.namespaceName).
 		Str("Release", hc.ReleaseName).
-		Str("Chart", hc.Path).
+		Str("HelmChart", hc.Path).
 		Msg("Successfully installed helm chart")
 	return nil
 }
 
 func (hc *HelmChart) fetchPods() error {
 	var err error
-	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.NamespaceName)
+	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.namespaceName)
 	hc.podsList, err = k8sPods.List(context.Background(), metaV1.ListOptions{
 		LabelSelector: fmt.Sprintf("release=%s", hc.ReleaseName),
 	})
@@ -194,7 +173,7 @@ func (hc *HelmChart) fetchPods() error {
 }
 
 func (hc *HelmChart) addInstanceLabel(app string) error {
-	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.NamespaceName)
+	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.namespaceName)
 	l, err := k8sPods.List(context.Background(), metaV1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", app)})
 	if err != nil {
 		return err
@@ -229,10 +208,10 @@ func (hc *HelmChart) updateChartSettings() error {
 				pm[port.Name] = int(port.ContainerPort)
 			}
 			if err := hc.ChartConnections.Store(app, instance, c.Name, &ChartConnection{
-				PodName:    p.Name,
-				PodIP:      p.Status.PodIP,
-				Ports:      pm,
-				LocalPorts: make(map[string]int),
+				PodName:     p.Name,
+				PodIP:       p.Status.PodIP,
+				RemotePorts: pm,
+				LocalPorts:  make(map[string]int),
 			}); err != nil {
 				return err
 			}
@@ -257,7 +236,7 @@ func (hc *HelmChart) enumerateApps() error {
 func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 	uniqueLabels := make([]string, 0)
 	isUnique := make(map[string]bool)
-	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.NamespaceName)
+	k8sPods := hc.env.k8sClient.CoreV1().Pods(hc.namespaceName)
 	podList, err := k8sPods.List(context.Background(), metaV1.ListOptions{
 		LabelSelector: selector,
 	})
@@ -274,64 +253,6 @@ func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 		Interface("AppLabels", uniqueLabels).
 		Msg("Apps found")
 	return uniqueLabels, nil
-}
-
-func (k *Environment) killForwarder(pid int) error {
-	// 0 means no process
-	// -1 can be set after detachment, don't try to kill it
-	if pid == 0 || pid == -1 {
-		return nil
-	}
-	cmd := exec.Command(
-		"kill",
-		"-9",
-		strconv.Itoa(pid),
-	)
-	err := cmd.Start()
-	if err != nil {
-		return errors.Wrapf(err, "failed to kill forwarder with pid: %d", pid)
-	}
-	return nil
-}
-
-func forkProcess(processName string, args []string) (int, error) {
-	fork := NewForkProcess(
-		os.Stdin, os.Stdout, os.Stderr,
-		uint32(os.Getuid()), uint32(os.Getgid()), "/")
-	pid, err := fork.Exec(processName, args)
-	if err != nil {
-		return 0, errors.Wrapf(err, "unable to fork process")
-	}
-	return pid, nil
-}
-
-// runProcessForwarder forking "kubectl port-forward" command and gets PID
-func (k *Environment) runProcessForwarder(podName string, portRules []string) (int, error) {
-	kubectlPath, err := exec.LookPath("kubectl")
-	if err != nil {
-		return 0, fmt.Errorf("kubectl doesn't appear to be installed on this machine: %v", err)
-	}
-
-	portRulesStr := strings.Join(portRules, " ")
-	processArgs := []string{
-		kubectlPath,
-		"-n",
-		k.Config.Namespace,
-		"port-forward",
-		fmt.Sprintf("%s/%s", "pods", podName),
-	}
-	processArgs = append(processArgs, portRules...)
-	log.Debug().
-		Str("Args", strings.Join(processArgs, " ")).
-		Msg("Process args")
-	pid, err := forkProcess(kubectlPath, processArgs)
-	if err != nil {
-		return 0, err
-	}
-	log.Debug().
-		Interface("Ports", portRulesStr).
-		Msg("Forwarded ports")
-	return pid, nil
 }
 
 // runGoForwarder runs port forwarder as a goroutine
@@ -369,17 +290,20 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 	}
 	if len(out.String()) > 0 {
 		msg := strings.ReplaceAll(out.String(), "\n", " ")
-		log.Debug().Str("Pod", podName).Msgf("%s", msg)
+		log.Info().Str("Pod", podName).Msgf("%s", msg)
 	}
 	return nil
 }
 
 func (hc *HelmChart) makePortRules(chartConnection *ChartConnection) ([]string, error) {
 	rules := make([]string, 0)
-	for portName, port := range chartConnection.Ports {
+	for portName, port := range chartConnection.RemotePorts {
 		freePort := rand.Intn(MaxPort-MinPort) + MinPort
 		if portName == "" {
 			return nil, fmt.Errorf("port %d must be named in helm chart", port)
+		}
+		if chartConnection.LocalPorts == nil {
+			chartConnection.LocalPorts = map[string]int{}
 		}
 		chartConnection.LocalPorts[portName] = freePort
 		rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
@@ -391,16 +315,5 @@ func (hc *HelmChart) connectPod(connectionInfo *ChartConnection, rules []string)
 	if len(rules) == 0 {
 		return nil
 	}
-	if !hc.env.Config.PersistentConnection {
-		if err := hc.env.runGoForwarder(connectionInfo.PodName, rules); err != nil {
-			return err
-		}
-		return nil
-	}
-	pid, err := hc.env.runProcessForwarder(connectionInfo.PodName, rules)
-	if err != nil {
-		return err
-	}
-	connectionInfo.ForwarderPID = pid
-	return nil
+	return hc.env.runGoForwarder(connectionInfo.PodName, rules)
 }

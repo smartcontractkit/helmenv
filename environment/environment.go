@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -33,9 +34,8 @@ type Environment struct {
 	Artifacts *Artifacts
 	Chaos     *chaos.Controller
 
-	helmCharts map[string]*HelmChart
-	k8sClient  *kubernetes.Clientset
-	k8sConfig  *rest.Config
+	k8sClient *kubernetes.Clientset
+	k8sConfig *rest.Config
 }
 
 // NewEnvironment creates new environment from charts
@@ -44,11 +44,13 @@ func NewEnvironment(config *Config) (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config.Charts == nil {
+		config.Charts = map[string]*HelmChart{}
+	}
 	he := &Environment{
-		Config:     config,
-		k8sClient:  ks,
-		k8sConfig:  kc,
-		helmCharts: map[string]*HelmChart{},
+		Config:    config,
+		k8sClient: ks,
+		k8sConfig: kc,
 	}
 	return he, nil
 }
@@ -68,9 +70,9 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 			chart.Path = key
 		}
 		if len(chart.ReleaseName) == 0 {
-			chart.ReleaseName = chart.Path
+			chart.ReleaseName = key
 		}
-		if len(chartDirectory) > 0 {
+		if len(chartDirectory) > 0 && !strings.Contains(chart.Path, chartDirectory) {
 			chart.Path = path.Join(chartDirectory, chart.Path)
 		}
 		if err := e.AddChart(chart); err != nil {
@@ -90,7 +92,7 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 // LoadEnvironment loads an already deployed environment from config
 func LoadEnvironment(config *Config) (*Environment, error) {
 	log.Info().
-		Interface("Settings", config).
+		Interface("Namespace", config.Namespace).
 		Msg("Loading environment")
 	environment, err := NewEnvironment(config)
 	if err != nil {
@@ -113,11 +115,9 @@ func LoadEnvironment(config *Config) (*Environment, error) {
 	}
 	environment.Chaos = cc
 	for _, chart := range environment.Config.Charts {
-		hc, err := NewHelmChart(environment, chart)
-		if err != nil {
-			return nil, err
+		if err := chart.Init(environment); err != nil {
+			return environment, err
 		}
-		environment.helmCharts[hc.Name] = hc
 	}
 	return environment, nil
 }
@@ -139,12 +139,9 @@ func GetLocalK8sDeps() (*kubernetes.Clientset, *rest.Config, error) {
 
 // Teardown tears down the helm releases
 func (k *Environment) Teardown() error {
-	if err := k.Disconnect(); err != nil {
-		return err
-	}
-	for _, c := range k.helmCharts {
-		log.Debug().Str("Release", c.Name).Msg("Uninstalling Helm release")
-		if _, err := action.NewUninstall(c.actionConfig).Run(c.Name); err != nil {
+	for _, c := range k.Charts {
+		log.Debug().Str("Release", c.ReleaseName).Msg("Uninstalling Helm release")
+		if _, err := action.NewUninstall(c.actionConfig).Run(c.ReleaseName); err != nil {
 			return err
 		}
 	}
@@ -166,6 +163,9 @@ func (k *Environment) DeferTeardown() {
 
 // Init inits namespace for an env and configure helm for k8s and that namespace
 func (k *Environment) Init(namespacePrefix string) error {
+	if len(namespacePrefix) == 0 {
+		return fmt.Errorf("namespace_prefix cannot be empty, exiting")
+	}
 	if err := k.createNamespace(namespacePrefix); err != nil {
 		return err
 	}
@@ -188,13 +188,27 @@ func (k *Environment) Init(namespacePrefix string) error {
 	return nil
 }
 
-// RemoveConfigConnectionInfo removes config connection info when environment was removed
-func (k *Environment) RemoveConfigConnectionInfo() error {
-	if k.Config.Persistent {
-		k.Config.Charts = nil
-		k.Config.Namespace = ""
+// ClearConfig resets the config so only the preset config remains
+func (k *Environment) ClearConfig() error {
+	for _, chart := range k.Charts {
+		chart.ChartConnections = nil
 	}
-	if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Namespace)); err != nil {
+	k.Namespace = ""
+	if err := DumpConfig(k.Config, k.Path); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ClearConfigLocalPorts removes the local ports set within config
+func (k *Environment) ClearConfigLocalPorts() error {
+	for _, chart := range k.Charts {
+		chart.ChartConnections.Range(func(_ string, chartConnection *ChartConnection) bool {
+			chartConnection.LocalPorts = nil
+			return true
+		})
+	}
+	if err := DumpConfig(k.Config, k.Path); err != nil {
 		return err
 	}
 	return nil
@@ -203,7 +217,10 @@ func (k *Environment) RemoveConfigConnectionInfo() error {
 // SyncConfig dumps config in Persistent mode
 func (k *Environment) SyncConfig() error {
 	if k.Config.Persistent {
-		if err := DumpConfig(k.Config, fmt.Sprintf("%s.yaml", k.Config.Namespace)); err != nil {
+		if len(k.Path) == 0 {
+			k.Path = fmt.Sprintf("%s.yaml", k.Namespace)
+		}
+		if err := DumpConfig(k.Config, k.Path); err != nil {
 			return err
 		}
 	}
@@ -213,8 +230,8 @@ func (k *Environment) SyncConfig() error {
 // Deploy a single chart
 func (k *Environment) Deploy(chartName string) error {
 	var chart *HelmChart
-	for _, c := range k.helmCharts {
-		if c.Name == chartName {
+	for _, c := range k.Charts {
+		if c.ReleaseName == chartName {
 			chart = c
 			break
 		}
@@ -228,7 +245,7 @@ func (k *Environment) Deploy(chartName string) error {
 // DeployAll deploys all deploy sequence at once
 func (k *Environment) DeployAll() error {
 	for _, key := range k.Charts.OrderedKeys() {
-		chart, ok := k.helmCharts[key]
+		chart, ok := k.Charts[key]
 		if !ok {
 			continue
 		}
@@ -243,20 +260,22 @@ func (k *Environment) DeployAll() error {
 }
 
 // AddChart adds chart to deploy
-func (k *Environment) AddChart(chart *Chart) error {
-	hc, err := NewHelmChart(k, chart)
-	if err != nil {
+func (k *Environment) AddChart(chart *HelmChart) error {
+	if chart.Index == 0 {
+		return fmt.Errorf("chart index cannot be 0")
+	}
+	if err := chart.Init(k); err != nil {
 		return err
 	}
-	k.helmCharts[hc.Name] = hc
+	k.Charts[chart.ReleaseName] = chart
 	return nil
 }
 
 // Connect to a single chart
 func (k *Environment) Connect(chartName string) error {
 	var chart *HelmChart
-	for _, c := range k.helmCharts {
-		if c.Name == chartName {
+	for _, c := range k.Charts {
+		if c.ReleaseName == chartName {
 			chart = c
 			break
 		}
@@ -269,35 +288,9 @@ func (k *Environment) Connect(chartName string) error {
 
 // ConnectAll connects to all containerPorts for all charts, dump config in JSON if Persistent flag is present
 func (k *Environment) ConnectAll() error {
-	for _, c := range k.helmCharts {
+	for _, c := range k.Charts {
 		if err := c.Connect(); err != nil {
 			return err
-		}
-	}
-	if err := k.SyncConfig(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Disconnect disconnects from all deployed charts, only working in Persistent mode
-func (k *Environment) Disconnect() error {
-	for _, c := range k.helmCharts {
-		log.Info().
-			Str("Release", c.Name).
-			Msg("Disconnecting")
-		var rangeErr error
-		c.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
-			if err := k.killForwarder(chartConnection.ForwarderPID); err != nil {
-				rangeErr = err
-				return false
-			}
-			chartConnection.ForwarderPID = 0
-			chartConnection.LocalPorts = make(map[string]int)
-			return true
-		})
-		if rangeErr != nil {
-			return rangeErr
 		}
 	}
 	if err := k.SyncConfig(); err != nil {
@@ -351,7 +344,7 @@ func (k *Environment) configureHelm() error {
 func (k *Environment) removeNamespace() error {
 	log.Info().
 		Str("Namespace", k.Config.Namespace).
-		Msg("Shutting down environment")
+		Msg("Deleting namespace")
 	if err := k.k8sClient.CoreV1().Namespaces().Delete(
 		context.Background(),
 		k.Config.Namespace,

@@ -1,8 +1,8 @@
 package environment
 
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
-func NewChainlinkChart(index int, values map[string]interface{}) *Chart {
-	return &Chart{Path: "chainlink", Values: values, Index: index}
+func NewChainlinkChart(index int, values map[string]interface{}) *HelmChart {
+	return &HelmChart{Path: "chainlink", Values: values, Index: index}
 }
 
 // NewChainlinkCCIPConfig returns a Chainlink environment for the purpose of CCIP testing
@@ -10,9 +10,9 @@ func NewChainlinkCCIPConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-ccip",
 		Charts: Charts{
-			"localterra": {Index: 0},
-			"geth-reorg": {Index: 1},
-			"chainlink":  NewChainlinkChart(2, chainlinkValues),
+			"localterra": {Index: 1},
+			"geth-reorg": {Index: 2},
+			"chainlink":  NewChainlinkChart(3, chainlinkValues),
 		},
 	}
 }
@@ -22,9 +22,9 @@ func NewTerraChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-terra",
 		Charts: Charts{
-			"localterra": {Index: 0},
-			"geth-reorg": {Index: 1},
-			"chainlink":  NewChainlinkChart(2, ChainlinkReplicas(2, chainlinkValues)),
+			"localterra": {Index: 1},
+			"geth-reorg": {Index: 2},
+			"chainlink":  NewChainlinkChart(3, ChainlinkReplicas(2, chainlinkValues)),
 		},
 	}
 }
@@ -34,8 +34,8 @@ func NewChainlinkReorgConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-reorg",
 		Charts: Charts{
-			"geth-reorg": {Index: 0},
-			"chainlink":  NewChainlinkChart(1, chainlinkValues),
+			"geth-reorg": {Index: 1},
+			"chainlink":  NewChainlinkChart(2, chainlinkValues),
 		},
 	}
 }
@@ -45,10 +45,10 @@ func NewChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink",
 		Charts: Charts{
-			"geth":              {Index: 0},
-			"mockserver-config": {Index: 1},
-			"mockserver":        {Index: 2},
-			"chainlink":         NewChainlinkChart(3, chainlinkValues),
+			"geth":              {Index: 1},
+			"mockserver-config": {Index: 2},
+			"mockserver":        {Index: 3},
+			"chainlink":         NewChainlinkChart(4, chainlinkValues),
 		},
 	}
 }

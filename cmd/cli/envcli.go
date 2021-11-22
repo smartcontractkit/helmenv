@@ -8,6 +8,7 @@ import (
 	"github.com/smartcontractkit/helmenv/tools"
 	"github.com/urfave/cli/v2"
 	"os"
+	"os/signal"
 )
 
 func init() {
@@ -37,15 +38,27 @@ func main() {
 				Name:    "new",
 				Aliases: []string{"n"},
 				Usage:   "create new environment from preset file",
-				Flags:   []cli.Flag{presetFlag},
+				Flags:   []cli.Flag{
+					presetFlag,
+					&cli.StringFlag{
+						Name:     "outputFile",
+						Aliases:  []string{"o"},
+						Usage:    "file path for the outputted environment config",
+						Required: false,
+					},
+				},
 				Action: func(c *cli.Context) error {
 					preset := c.String("preset")
+					// Override the `Path` key in Config to dictate where the file is written
+					if err := os.Setenv("CONFIG_PATH", c.String("outputFile")); err != nil {
+						return err
+					}
 					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, preset)
 					if err != nil {
 						return err
 					}
 					log.Info().
-						Str("environmentFile", fmt.Sprintf("%s.yaml", e.Config.NamespacePrefix)).
+						Str("environmentFile", e.Path).
 						Msg("Environment setup and written to file")
 					return nil
 				},
@@ -57,36 +70,27 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.LoadEnvironment(environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 					if err != nil {
 						return err
-					}
-					if !e.Config.PersistentConnection {
-						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
 					}
 					if err := e.ConnectAll(); err != nil {
 						return err
 					}
-					return nil
-				},
-			},
-			{
-				Name:    "disconnect",
-				Aliases: []string{"dc"},
-				Usage:   "disconnects from the environment",
-				Flags:   []cli.Flag{environmentFlag},
-				Action: func(c *cli.Context) error {
-					environmentPath := c.String("environment")
-					e, err := environment.LoadEnvironment(environmentPath)
-					if err != nil {
-						return err
-					}
-					if !e.Config.PersistentConnection {
-						return fmt.Errorf("persistent_connection is set to false, only usable programmatically")
-					}
-					if err := e.Disconnect(); err != nil {
-						return err
-					}
+					defer func() {
+						if err := e.ClearConfigLocalPorts(); err != nil {
+							log.Error().Err(err).Msg("Error while clearing local ports in environment config")
+						}
+						log.Info().Str("Namespace", e.Namespace).Msg("Disconnected from environment")
+					}()
+					log.Info().
+						Str("Namespace", e.Namespace).
+						Msgf("Ports forwarded, view output or `%s` file for connection details", e.Path)
+
+					// Wait until the user wants to stop the connection to the environment
+					interrupt := make(chan os.Signal, 1)
+					signal.Notify(interrupt, os.Interrupt)
+					<-interrupt
 					return nil
 				},
 			},
@@ -97,16 +101,19 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.LoadEnvironment(environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 					if err != nil {
 						return err
 					}
+					namespace := e.Namespace
+					log.Info().Str("Namespace", namespace).Msg("Tearing down environment")
 					if err := e.Teardown(); err != nil {
 						return err
 					}
-					if err := e.RemoveConfigConnectionInfo(); err != nil {
+					if err := e.ClearConfig(); err != nil {
 						return err
 					}
+					log.Info().Msgf("Environment removed, it can be re-created by running: `envcli new -p %s`", e.Path)
 					return nil
 				},
 			},
@@ -133,7 +140,7 @@ func main() {
 					environmentPath := c.String("environment")
 					artifactsDir := c.String("artifacts")
 					dbName := c.String("database")
-					e, err := environment.LoadEnvironment(environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 					if err != nil {
 						return err
 					}
@@ -163,7 +170,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosTemplate := c.String("template")
-							e, err := environment.LoadEnvironment(environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 							if err != nil {
 								return err
 							}
@@ -189,7 +196,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosID := c.String("chaos_id")
-							e, err := environment.LoadEnvironment(environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 							if err != nil {
 								return err
 							}
@@ -210,7 +217,7 @@ func main() {
 						Flags:   []cli.Flag{environmentFlag},
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
-							e, err := environment.LoadEnvironment(environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
 							if err != nil {
 								return err
 							}
