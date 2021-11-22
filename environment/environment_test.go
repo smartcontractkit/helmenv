@@ -97,6 +97,23 @@ func TestMultipleChartsSeparate(t *testing.T) {
 	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
 }
 
+func TestDeployRepositoryChart(t *testing.T) {
+	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
+	e, err := environment.NewEnvironment(&environment.Config{})
+	defer teardown(t, e)
+	require.NoError(t, err)
+	err = e.Init(envName)
+	require.NoError(t, err)
+
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "nginx",
+		URL:         "https://charts.bitnami.com/bitnami/nginx-9.5.13.tgz",
+		Index:       1,
+	})
+	err = e.Deploy("nginx")
+	require.NoError(t, err)
+}
+
 func TestExecuteInPod(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
