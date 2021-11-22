@@ -36,3 +36,6 @@ bin/
 
 # Test yaml files
 /*.yaml
+
+# Testing log dumps
+environment/test-artifacts/
