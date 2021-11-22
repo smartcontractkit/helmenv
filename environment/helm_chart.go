@@ -1,7 +1,6 @@
 package environment
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -13,14 +12,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 	"math/rand"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -253,46 +247,6 @@ func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 		Interface("AppLabels", uniqueLabels).
 		Msg("Apps found")
 	return uniqueLabels, nil
-}
-
-// runGoForwarder runs port forwarder as a goroutine
-func (k *Environment) runGoForwarder(podName string, portRules []string) error {
-	roundTripper, upgrader, err := spdy.RoundTripperFor(k.k8sConfig)
-	if err != nil {
-		return err
-	}
-	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", k.Config.Namespace, podName)
-	hostIP := strings.TrimLeft(k.k8sConfig.Host, "htps:/")
-	serverURL := url.URL{Scheme: "https", Path: path, Host: hostIP}
-
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, &serverURL)
-
-	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
-	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
-
-	log.Debug().
-		Str("Pod", podName).
-		Msg("Attempting to forward port")
-
-	forwarder, err := portforward.New(dialer, portRules, stopChan, readyChan, out, errOut)
-	if err != nil {
-		return err
-	}
-	go func() {
-		if err := forwarder.ForwardPorts(); err != nil {
-			log.Error().Str("Pod", podName).Err(err)
-		}
-	}()
-
-	<-readyChan
-	if len(errOut.String()) > 0 {
-		return fmt.Errorf("error on forwarding k8s port: %v", errOut.String())
-	}
-	if len(out.String()) > 0 {
-		msg := strings.ReplaceAll(out.String(), "\n", " ")
-		log.Info().Str("Pod", podName).Msgf("%s", msg)
-	}
-	return nil
 }
 
 func (hc *HelmChart) makePortRules(chartConnection *ChartConnection) ([]string, error) {

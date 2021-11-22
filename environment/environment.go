@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -11,6 +12,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -34,8 +39,9 @@ type Environment struct {
 	Artifacts *Artifacts
 	Chaos     *chaos.Controller
 
-	k8sClient *kubernetes.Clientset
-	k8sConfig *rest.Config
+	k8sClient  *kubernetes.Clientset
+	k8sConfig  *rest.Config
+	forwarders []*portforward.PortForwarder
 }
 
 // NewEnvironment creates new environment from charts
@@ -137,8 +143,18 @@ func GetLocalK8sDeps() (*kubernetes.Clientset, *rest.Config, error) {
 	return k8sClient, k8sConfig, nil
 }
 
+// Disconnect closes any current open port forwarder rules
+func (k *Environment) Disconnect() {
+	log.Info().Str("Namespace", k.Namespace).Msg("Disconnecting all open forwarded ports")
+	for _, forwarder := range k.forwarders {
+		forwarder.Close()
+	}
+	return
+}
+
 // Teardown tears down the helm releases
 func (k *Environment) Teardown() error {
+	k.Disconnect()
 	for _, c := range k.Charts {
 		log.Debug().Str("Release", c.ReleaseName).Msg("Uninstalling Helm release")
 		if _, err := action.NewUninstall(c.actionConfig).Run(c.ReleaseName); err != nil {
@@ -352,5 +368,46 @@ func (k *Environment) removeNamespace() error {
 	); err != nil {
 		return err
 	}
+	return nil
+}
+
+// runGoForwarder runs port forwarder as a goroutine
+func (k *Environment) runGoForwarder(podName string, portRules []string) error {
+	roundTripper, upgrader, err := spdy.RoundTripperFor(k.k8sConfig)
+	if err != nil {
+		return err
+	}
+	httpPath := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", k.Config.Namespace, podName)
+	hostIP := strings.TrimLeft(k.k8sConfig.Host, "htps:/")
+	serverURL := url.URL{Scheme: "https", Path: httpPath, Host: hostIP}
+
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, &serverURL)
+
+	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
+	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+
+	log.Debug().
+		Str("Pod", podName).
+		Msg("Attempting to forward port")
+
+	forwarder, err := portforward.New(dialer, portRules, stopChan, readyChan, out, errOut)
+	if err != nil {
+		return err
+	}
+	go func() {
+		if err := forwarder.ForwardPorts(); err != nil {
+			log.Error().Str("Pod", podName).Err(err)
+		}
+	}()
+
+	<-readyChan
+	if len(errOut.String()) > 0 {
+		return fmt.Errorf("error on forwarding k8s port: %v", errOut.String())
+	}
+	if len(out.String()) > 0 {
+		msg := strings.ReplaceAll(out.String(), "\n", " ")
+		log.Info().Str("Pod", podName).Msgf("%s", msg)
+	}
+	k.forwarders = append(k.forwarders, forwarder)
 	return nil
 }

@@ -78,6 +78,7 @@ func main() {
 						return err
 					}
 					defer func() {
+						e.Disconnect()
 						if err := e.ClearConfigLocalPorts(); err != nil {
 							log.Error().Err(err).Msg("Error while clearing local ports in environment config")
 						}
