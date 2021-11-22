@@ -1,8 +1,12 @@
 namespace_prefix: chainlink
 charts:
-  - path: geth
-  - path: mockserver-config
-  - path: mockserver
-  - path: chainlink
-    override_values:
-      replicaCount: 1
+  geth:
+    index: 1
+  mockserver-config:
+    index: 2
+  mockserver:
+    index: 3
+  chainlink:
+    index: 4
+    values:
+      replicas: 1

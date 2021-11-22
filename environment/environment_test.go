@@ -30,15 +30,17 @@ func TestCanDeployAll(t *testing.T) {
 	err = e.Init(envName)
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.Chart{
+	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "geth",
 		Path:        filepath.Join(tools.ChartsRoot, "geth"),
+		Index:       2, // Deliberate unordered keys to test the OrderedKeys function in Charts
 	})
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.Chart{
+	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "chainlink",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+		Index:       4, // Deliberate unordered keys to test the OrderedKeys function in Charts
 	})
 	require.NoError(t, err)
 
@@ -47,12 +49,12 @@ func TestCanDeployAll(t *testing.T) {
 	err = e.ConnectAll()
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].RemotePorts["ws-rpc"])
 	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].Ports["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].RemotePorts["access"])
 	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].RemotePorts["postgres"])
 	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
 }
 
@@ -64,9 +66,10 @@ func TestMultipleChartsSeparate(t *testing.T) {
 	err = e.Init(envName)
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.Chart{
+	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "geth",
 		Path:        filepath.Join(tools.ChartsRoot, "geth"),
+		Index:       1,
 	})
 	require.NoError(t, err)
 	err = e.Deploy("geth")
@@ -74,9 +77,10 @@ func TestMultipleChartsSeparate(t *testing.T) {
 	err = e.Connect("geth")
 	require.NoError(t, err)
 
-	err = e.AddChart(&environment.Chart{
+	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "chainlink",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+		Index:       2,
 	})
 	require.NoError(t, err)
 	err = e.Deploy("chainlink")
@@ -84,12 +88,12 @@ func TestMultipleChartsSeparate(t *testing.T) {
 	err = e.Connect("chainlink")
 	require.NoError(t, err)
 
-	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].Ports["ws-rpc"])
+	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].RemotePorts["ws-rpc"])
 	require.NotEmpty(t, e.Config.Charts["geth"].ChartConnections["geth_0_geth-network"].LocalPorts["ws-rpc"])
 
-	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].Ports["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].RemotePorts["access"])
 	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_node"].LocalPorts["access"])
-	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].Ports["postgres"])
+	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].RemotePorts["postgres"])
 	require.NotEmpty(t, e.Config.Charts["chainlink"].ChartConnections["chainlink-node_0_chainlink-db"].LocalPorts["postgres"])
 }
 

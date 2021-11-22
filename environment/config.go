@@ -14,16 +14,16 @@ import (
 // Config represents the full configuration of an environment, it can either be defined
 // programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
-	Persistent           bool                             `json:"persistent" envconfig:"persistent"`
-	PersistentConnection bool                             `json:"persistent_connection" envconfig:"persistent_connection"`
-	NamespacePrefix      string                           `json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
-	Namespace            string                           `json:"namespace,omitempty" envconfig:"namespace"`
-	Charts               Charts                           `json:"charts,omitempty" envconfig:"charts"`
-	Experiments          map[string]*chaos.ExperimentInfo `json:"experiments,omitempty" envconfig:"experiments"`
+	Path            string                           `yaml:"-" json:"-" envconfig:"config_path"`
+	Persistent      bool                             `yaml:"persistent" json:"persistent" envconfig:"persistent"`
+	NamespacePrefix string                           `yaml:"namespace_prefix,omitempty" json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
+	Namespace       string                           `yaml:"namespace,omitempty" json:"namespace,omitempty" envconfig:"namespace"`
+	Charts          Charts                           `yaml:"charts,omitempty" json:"charts,omitempty" envconfig:"charts"`
+	Experiments     map[string]*chaos.ExperimentInfo `yaml:"experiments,omitempty" json:"experiments,omitempty" envconfig:"experiments"`
 }
 
 // Charts represents a map of charts with some helper methods
-type Charts map[string]*Chart
+type Charts map[string]*HelmChart
 
 // Connections is a helper method for simply accessing chart connections, also safely allowing method chaining
 func (c Charts) Connections(chart string) *ChartConnections {
@@ -65,8 +65,8 @@ func (c Charts) OrderedKeys() []string {
 		indexes = append(indexes, index)
 	}
 	sort.Ints(indexes)
-	for _, index := range indexes {
-		keys[index] = indexMap[index]
+	for i, chartIndex := range indexes {
+		keys[i] = indexMap[chartIndex]
 	}
 	return keys
 }
@@ -108,6 +108,10 @@ func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, filePath string) (*En
 	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, err
 	}
+	config.Path = filePath
+	// Always set to true when loading from file as the environment state would be lost on deployment since if false
+	// config isn't written to disk
+	config.Persistent = true
 	return deployOrLoadEnvironment(config, chartDirectory)
 }
 
