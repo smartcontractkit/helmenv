@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"helm.sh/helm/v3/pkg/action"
@@ -16,7 +17,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -36,6 +39,7 @@ const (
 type HelmChart struct {
 	ReleaseName      string                 `yaml:"release_name,omitempty" json:"release_name,omitempty" envconfig:"release_name"`
 	Path             string                 `yaml:"path,omitempty" json:"path,omitempty" envconfig:"path"`
+	URL              string                 `yaml:"url,omitempty" json:"url,omitempty" envconfig:"url"`
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty" envconfig:"values"`
 	Index            int                    `yaml:"index,omitempty" json:"index,omitempty" envconfig:"index"`
 	ChartConnections ChartConnections       `yaml:"chart_connections,omitempty" json:"chart_connections,omitempty" envconfig:"chart_connections"`
@@ -80,6 +84,11 @@ func (hc *HelmChart) Connect() error {
 
 // Deploy deploys a chart and update config settings
 func (hc *HelmChart) Deploy() error {
+	if len(hc.URL) > 0 {
+		if err := hc.downloadChart(); err != nil {
+			return err
+		}
+	}
 	if err := hc.deployChart(); err != nil {
 		return err
 	}
@@ -201,6 +210,39 @@ func (hc *HelmChart) deployChart() error {
 		Str("Release", hc.ReleaseName).
 		Str("HelmChart", hc.Path).
 		Msg("Successfully installed helm chart")
+	return nil
+}
+
+func (hc *HelmChart) downloadChart() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	downloadDir := filepath.Join(homeDir, ".helmenv")
+	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
+		if err := os.Mkdir(downloadDir, 0755); err != nil {
+			return fmt.Errorf("failed to create helmenv directory: %v", err)
+		}
+	}
+	chartURL, err := url.Parse(hc.URL)
+	if err != nil {
+		log.Error().Err(err).Msg("Invalid URL given for the Helm chart")
+	}
+
+	fileName := path.Base(chartURL.Path)
+	filePath := filepath.Join(downloadDir, fileName)
+	if _, err := os.Stat(filePath); err == nil {
+		log.Debug().Str("URL", hc.URL).Msg("Chart already downloaded")
+		hc.Path = filePath
+		return nil
+	}
+
+	log.Info().Str("URL", hc.URL).Msg("Downloading Helm chart from repository")
+	resp, err := grab.Get(downloadDir, hc.URL)
+	if err != nil {
+		return fmt.Errorf("failed to download Helm chart: %v", err)
+	}
+	hc.Path = resp.Filename
 	return nil
 }
 

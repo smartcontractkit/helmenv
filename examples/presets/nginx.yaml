@@ -1,0 +1,5 @@
+namespace_prefix: nginx
+charts:
+  nginx:
+    index: 1
+    url: https://charts.bitnami.com/bitnami/nginx-9.5.13.tgz

@@ -31,6 +31,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cavaliercoder/grab v2.0.0+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
