@@ -17,7 +17,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -222,6 +224,19 @@ func (hc *HelmChart) downloadChart() error {
 			return fmt.Errorf("failed to create helmenv directory: %v", err)
 		}
 	}
+	chartURL, err := url.Parse(hc.URL)
+	if err != nil {
+		log.Error().Err(err).Msg("Invalid URL given for the Helm chart")
+	}
+
+	fileName := path.Base(chartURL.Path)
+	filePath := filepath.Join(downloadDir, fileName)
+	if _, err := os.Stat(filePath); err == nil {
+		log.Debug().Str("URL", hc.URL).Msg("Chart already downloaded")
+		hc.Path = filePath
+		return nil
+	}
+
 	log.Info().Str("URL", hc.URL).Msg("Downloading Helm chart from repository")
 	resp, err := grab.Get(downloadDir, hc.URL)
 	if err != nil {
