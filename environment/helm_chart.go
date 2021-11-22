@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -12,9 +13,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -89,6 +93,52 @@ func (hc *HelmChart) Deploy() error {
 		return err
 	}
 	return nil
+}
+
+// ExecuteInPod is similar to kubectl exec
+func (hc *HelmChart) ExecuteInPod(podName string, containerName string, command []string) ([]byte, []byte, error) {
+	req := hc.env.k8sClient.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(hc.namespaceName).
+		SubResource("exec")
+	req.VersionedParams(&v1.PodExecOptions{
+		Container: containerName,
+		Command:   command,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+	}, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(hc.env.k8sConfig, "POST", req.URL())
+	if err != nil {
+		return []byte{}, []byte{}, err
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		return []byte{}, []byte{}, err
+	}
+	return stdout.Bytes(), stderr.Bytes(), nil
+}
+
+func (hc *HelmChart) GetPodsByNameSubstring(nameSubstring string) ([]v1.Pod, error) {
+	if len(hc.podsList.Items) == 0 {
+		return nil, errors.New("There are no pods in this chart")
+	}
+	pods := []v1.Pod{}
+	for _, p := range hc.podsList.Items {
+		if strings.Contains(p.Name, nameSubstring) {
+			pods = append(pods, p)
+		}
+	}
+	return pods, nil
 }
 
 func (hc *HelmChart) init() error {

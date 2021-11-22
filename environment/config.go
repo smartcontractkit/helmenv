@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"errors"
 	"fmt"
 	"github.com/imdario/mergo"
 	"github.com/kelseyhightower/envconfig"
@@ -32,6 +33,29 @@ func (c Charts) Connections(chart string) *ChartConnections {
 	} else {
 		return &chart.ChartConnections
 	}
+}
+
+// ExecuteInPod is similar to kubectl exec
+func (c Charts) ExecuteInPod(chartName string, podNameSubstring string, podIndex int, containerName string, command []string) error {
+	chart, ok := c[chartName]
+	if !ok {
+		return errors.New(fmt.Sprintf("no chart with name %s", chartName))
+	}
+	pods, err := chart.GetPodsByNameSubstring(podNameSubstring)
+	if err != nil {
+		return err
+	}
+	if len(pods) == 0 {
+		return errors.New(fmt.Sprintf("no pods with name that contain %s", podNameSubstring))
+	}
+	if podIndex >= len(pods) || podIndex < 0 {
+		return errors.New("pod index is out bounds")
+	}
+	_, _, err = chart.ExecuteInPod(pods[podIndex].Name, containerName, command)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Decode is used by envconfig to initialise the custom Charts type with populated values
