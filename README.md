@@ -17,23 +17,23 @@ envcli -h
 
 Create new environment with a preset
 ```
-envcli new -p examples/standalone/chainlink-example-preset
+envcli new -p examples/presets/chainlink.yaml -o my_env.yaml
 ```
 You'll see all deployed charts info are now added to a preset `yaml` file
 
 Now you can connect
 ```
-envcli connect -e examples/standalone/chainlink-example-preset
+envcli connect -e my_env.yaml
 ```
 You can see all forwarded ports and get it by name from config now
 
 Dump all the logs and postgres sqls
 ```
-envcli dump -e chainlink-example-preset -a test_logs -db chainlink
+envcli dump -e my_env.yaml -a test_logs -db chainlink
 ```
 Apply some chaos from template
 ```
-envcli chaos apply -e examples/standalone/chainlink-example-preset -t examples/standalone/pod-failure-tmpl.yml
+envcli chaos apply -e my_env.yaml -t examples/standalone/pod-failure-tmpl.yml
 ```
 Now you can find running experiment ID in `examples/standalone/chainlink-example-preset`
 
@@ -46,13 +46,9 @@ Clear all chaos if you have multiple experiments running
 envcli chaos clear -e examples/standalone/chainlink-example-preset
 ```
 
-To disconnect use
-```
-envcli disconnect -e examples/standalone/chainlink-example-preset
-```
 To remove env use
 ```
-envcli remove -e examples/standalone/chainlink-example-preset
+envcli remove -e -e my_env.yaml
 ```
 
 #### Usage as a library
