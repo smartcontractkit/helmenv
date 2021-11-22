@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"io"
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // Artifacts is an artifacts dumping structure that copies logs and database dumps for all deployed pods
@@ -26,7 +27,7 @@ type Artifacts struct {
 
 // NewArtifacts create new artifacts instance for provided environment
 func NewArtifacts(env *Environment) (*Artifacts, error) {
-	podsClient := env.k8sClient.CoreV1().Pods(env.Config.NamespacePrefix)
+	podsClient := env.k8sClient.CoreV1().Pods(env.Config.Namespace)
 	return &Artifacts{
 		env:        env,
 		podsClient: podsClient,
