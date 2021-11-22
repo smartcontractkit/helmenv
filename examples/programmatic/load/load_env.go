@@ -28,8 +28,6 @@ func main() {
 		log.Error().Msg(err.Error())
 		return
 	}
-	// if you don't need to keep forwarders as a forked process, for example in test
-	loadedEnv.Config.PersistentConnection = false
 	if err := loadedEnv.ConnectAll(); err != nil {
 		log.Error().Msg(err.Error())
 		return
