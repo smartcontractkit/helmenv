@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chainlink-node
+  name: {{ .Release.Name }}-node
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: chainlink-node
+      app: {{ .Release.Name }}-node
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: chainlink-node
+        app: {{ .Release.Name }}-node
         release: {{ .Release.Name }}
       annotations:
         prometheus.io/scrape: 'true'
     spec:
       volumes:
-        - name: chainlink-config-map
+        - name: {{ .Release.Name }}-config-map
           configMap:
-            name: chainlink-cm
+            name: {{ .Release.Name }}-cm
       containers:
         - name: chainlink-db
           image: postgres:11.6
@@ -87,7 +87,7 @@ spec:
             {{- end }}
           {{- end }}
           volumeMounts:
-            - name: chainlink-config-map
+            - name: {{ .Release.Name }}-config-map
               mountPath: /etc/node-secrets-volume/
           livenessProbe:
             httpGet:
