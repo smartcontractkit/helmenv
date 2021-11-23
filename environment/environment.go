@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
+	"golang.org/x/sync/errgroup"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -260,12 +261,16 @@ func (k *Environment) Deploy(chartName string) error {
 
 // DeployAll deploys all deploy sequence at once
 func (k *Environment) DeployAll() error {
-	for _, key := range k.Charts.OrderedKeys() {
-		chart, ok := k.Charts[key]
-		if !ok {
-			continue
+	for _, keySlice := range k.Charts.OrderedKeys() {
+		group := &errgroup.Group{}
+		for _, key := range keySlice {
+			chart, ok := k.Charts[key]
+			if !ok {
+				continue
+			}
+			group.Go(chart.Deploy)
 		}
-		if err := chart.Deploy(); err != nil {
+		if err := group.Wait(); err != nil {
 			return err
 		}
 	}

@@ -115,6 +115,36 @@ func TestDeployRepositoryChart(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestParallelDeployments(t *testing.T) {
+	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
+	e, err := environment.NewEnvironment(&environment.Config{})
+	defer teardown(t, e)
+	require.NoError(t, err)
+	err = e.Init(envName)
+	require.NoError(t, err)
+
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "geth",
+		Path:        filepath.Join(tools.ChartsRoot, "geth"),
+		Index:       1,
+	})
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "chainlink-1",
+		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+		Index:       2,
+	})
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "chainlink-2",
+		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+		Index:       2,
+	})
+	err = e.DeployAll()
+	require.NoError(t, err)
+
+	require.NotEmpty(t, e.Config.Charts["chainlink-1"].ChartConnections["chainlink-1-node_0_node"].RemotePorts["access"])
+	require.NotEmpty(t, e.Config.Charts["chainlink-2"].ChartConnections["chainlink-2-node_0_node"].RemotePorts["access"])
+}
+
 func TestExecuteInPod(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
