@@ -53,6 +53,7 @@ func NewChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	}
 }
 
+// ChainlinkVersion sets the version of the chainlink image to use
 func ChainlinkVersion(version string, values map[string]interface{}) map[string]interface{} {
 	if values == nil {
 		values = map[string]interface{}{}
@@ -65,6 +66,7 @@ func ChainlinkVersion(version string, values map[string]interface{}) map[string]
 	return values
 }
 
+// ChainlinkReplicas sets the replica count of chainlink nodes to use
 func ChainlinkReplicas(count int, values map[string]interface{}) map[string]interface{} {
 	if values == nil {
 		values = map[string]interface{}{}

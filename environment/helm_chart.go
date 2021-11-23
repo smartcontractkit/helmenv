@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -16,12 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
-	"math/rand"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -152,6 +153,7 @@ func (hc *HelmChart) ExecuteInPod(podName string, containerName string, command 
 	return stdout.Bytes(), stderr.Bytes(), nil
 }
 
+// GetPodsByNameSubstring retrieves all running pods whose names contain the provided substring
 func (hc *HelmChart) GetPodsByNameSubstring(nameSubstring string) ([]v1.Pod, error) {
 	if len(hc.podsList.Items) == 0 {
 		return nil, errors.New("There are no pods in this chart")

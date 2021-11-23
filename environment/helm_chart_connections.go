@@ -2,17 +2,23 @@ package environment
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"net/url"
+	"sort"
+
+	"github.com/pkg/errors"
 )
 
 // Protocol represents a URL scheme to use when fetching connection details
 type Protocol int
 
 const (
+	// WS : Web Socket Protocol
 	WS Protocol = iota
+	// WSS : Web Socket Secure Protocol
 	WSS
+	// HTTP : Hypertext Transfer Protocol
 	HTTP
+	// HTTPS : Hypertext Transfer Protocol Secure
 	HTTPS
 )
 
@@ -77,7 +83,7 @@ func (cc *ChartConnections) LoadByPort(port int) ([]*ChartConnection, error) {
 func (cc *ChartConnections) LoadByPortName(portName string) ([]*ChartConnection, error) {
 	var connections []*ChartConnection
 	cc.Range(func(_ string, chartConnection *ChartConnection) bool {
-		for remotePortName, _ := range chartConnection.RemotePorts {
+		for remotePortName := range chartConnection.RemotePorts {
 			if remotePortName == portName {
 				connections = append(connections, chartConnection)
 			}
@@ -87,6 +93,13 @@ func (cc *ChartConnections) LoadByPortName(portName string) ([]*ChartConnection,
 	if len(connections) == 0 {
 		return connections, fmt.Errorf("no connections by port %s found in the environment", portName)
 	}
+
+	// Ensures that when calling either for local or remote ports, the pods are returned in the same order. This enables
+	// matching of Local and Remote URLs.
+	sort.Slice(connections, func(i, j int) bool {
+		return connections[i].PodIP < connections[j].PodIP
+	})
+
 	return connections, nil
 }
 
