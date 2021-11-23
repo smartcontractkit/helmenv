@@ -46,8 +46,8 @@ type HelmChart struct {
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty" envconfig:"values"`
 	Index            int                    `yaml:"index,omitempty" json:"index,omitempty" envconfig:"index"`
 	ChartConnections ChartConnections       `yaml:"chart_connections,omitempty" json:"chart_connections,omitempty" envconfig:"chart_connections"`
-	BeforeHook       Hook
-	AfterHook        Hook
+	BeforeHook       Hook                   `yaml:"-" json:"-" envconfig:"-"`
+	AfterHook        Hook                   `yaml:"-" json:"-" envconfig:"-"`
 
 	// Internal properties used for deployment
 	namespaceName string

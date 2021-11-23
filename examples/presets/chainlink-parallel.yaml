@@ -1,0 +1,18 @@
+namespace_prefix: chainlink
+charts:
+  geth:
+    index: 1
+  mockserver-config:
+    index: 2
+  mockserver:
+    index: 3
+  chainlink-1:
+    index: 4
+    path: chainlink
+    values:
+      replicas: 1
+  chainlink-2:
+    index: 4
+    path: chainlink
+    values:
+      replicas: 1

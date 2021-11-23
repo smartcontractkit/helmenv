@@ -78,11 +78,11 @@ func (c Charts) Decode(value string) error {
 }
 
 // OrderedKeys returns an ordered list of the map keys based on the charts Index value
-func (c Charts) OrderedKeys() []string {
-	keys := make([]string, len(c))
-	indexMap := map[int]string{}
+func (c Charts) OrderedKeys() [][]string {
+	keys := make([][]string, len(c))
+	indexMap := map[int][]string{}
 	for key, chart := range c {
-		indexMap[chart.Index] = key
+		indexMap[chart.Index] = append(indexMap[chart.Index], key)
 	}
 	var indexes []int
 	for index := range indexMap {
