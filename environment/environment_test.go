@@ -139,6 +139,38 @@ func TestExecuteInPod(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestBeforeAndAfterHook(t *testing.T) {
+	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
+	e, err := environment.NewEnvironment(&environment.Config{})
+	defer teardown(t, e)
+	require.NoError(t, err)
+	err = e.Init(envName)
+	require.NoError(t, err)
+
+	var before, after string
+	err = e.AddChart(&environment.HelmChart{
+		BeforeHook: func(_ *environment.Environment) error {
+			before = "value"
+			return nil
+		},
+		ReleaseName: "geth",
+		Path:        filepath.Join(tools.ChartsRoot, "geth"),
+		Index:       1,
+		AfterHook: func(_ *environment.Environment) error {
+			after = "value"
+			return nil
+		},
+	})
+	require.NoError(t, err)
+	err = e.Deploy("geth")
+	require.NoError(t, err)
+	err = e.Connect("geth")
+	require.NoError(t, err)
+
+	require.NotEmpty(t, before)
+	require.NotEmpty(t, after)
+}
+
 func TestCanConnectProgrammatically(t *testing.T) {
 	// TODO
 }

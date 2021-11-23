@@ -35,6 +35,9 @@ const (
 	InstanceEnumerationLabelKey = "instance"
 )
 
+// Hook is an environment hook to be ran either before or after a deployment
+type Hook func(environment *Environment) error
+
 // HelmChart represents a single Helm chart to be installed into a cluster
 type HelmChart struct {
 	ReleaseName      string                 `yaml:"release_name,omitempty" json:"release_name,omitempty" envconfig:"release_name"`
@@ -43,6 +46,8 @@ type HelmChart struct {
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty" envconfig:"values"`
 	Index            int                    `yaml:"index,omitempty" json:"index,omitempty" envconfig:"index"`
 	ChartConnections ChartConnections       `yaml:"chart_connections,omitempty" json:"chart_connections,omitempty" envconfig:"chart_connections"`
+	BeforeHook       Hook
+	AfterHook        Hook
 
 	// Internal properties used for deployment
 	namespaceName string
@@ -89,6 +94,11 @@ func (hc *HelmChart) Deploy() error {
 			return err
 		}
 	}
+	if hc.BeforeHook != nil {
+		if err := hc.BeforeHook(hc.env); err != nil {
+			return err
+		}
+	}
 	if err := hc.deployChart(); err != nil {
 		return err
 	}
@@ -100,6 +110,11 @@ func (hc *HelmChart) Deploy() error {
 	}
 	if err := hc.updateChartSettings(); err != nil {
 		return err
+	}
+	if hc.AfterHook != nil {
+		if err := hc.AfterHook(hc.env); err != nil {
+			return err
+		}
 	}
 	return nil
 }
