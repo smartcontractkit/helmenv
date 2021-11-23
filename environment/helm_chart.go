@@ -119,6 +119,16 @@ func (hc *HelmChart) Deploy() error {
 	return nil
 }
 
+func (hc *HelmChart) DeployAndConnect() error {
+	if err := hc.Deploy(); err != nil {
+		return err
+	}
+	if err := hc.Connect(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ExecuteInPod is similar to kubectl exec
 func (hc *HelmChart) ExecuteInPod(podName string, containerName string, command []string) ([]byte, []byte, error) {
 	req := hc.env.k8sClient.CoreV1().RESTClient().Post().

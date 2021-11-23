@@ -280,6 +280,27 @@ func (k *Environment) DeployAll() error {
 	return nil
 }
 
+// DeployAndConnectAll deploys and connects
+func (k *Environment) DeployAndConnectAll() error {
+	for _, keySlice := range k.Charts.OrderedKeys() {
+		group := &errgroup.Group{}
+		for _, key := range keySlice {
+			chart, ok := k.Charts[key]
+			if !ok {
+				continue
+			}
+			group.Go(chart.DeployAndConnect)
+		}
+		if err := group.Wait(); err != nil {
+			return err
+		}
+	}
+	if err := k.SyncConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // AddChart adds chart to deploy
 func (k *Environment) AddChart(chart *HelmChart) error {
 	if chart.Index == 0 {
