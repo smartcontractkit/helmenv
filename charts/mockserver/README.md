@@ -42,11 +42,11 @@ kubectl -n mockserver rollout status deployments mockserver
 
 To check the status of the deployment without waiting, run the following command and confirm the `mockserver` has the `Running` status:
 
-```bash 
+```bash
 kubectl -n mockserver get po -l release=mockserver
 ```
 
-### Basic MockServer Configuration 
+### Basic MockServer Configuration
 
 Modify the arguments used to start the docker container by setting values explicitly using `--set`, as follows:
 
@@ -55,6 +55,7 @@ helm upgrade --install --namespace mockserver --set app.serverPort=1080 --set ap
 ```
 
 The following values are supported:
+
 - `app.serverPort` (default: 1080)
 - `app.logLevel` (default: INFO)
 - `app.proxyRemoteHost` (no default)
@@ -101,7 +102,8 @@ An example of a helm chart to configure MockServer is [helm/mockserver-config](h
 To use [class callbacks](https://www.mock-server.com/mock_server/creating_expectations.html#button_response_class_callback) or an [expectation initializer class](https://www.mock-server.com/mock_server/initializing_expectations.html#expectation_initializer_class) the classpath for MockServer must include the specified classes.
 To support adding classes to the classpath if a configmap called `mockserver-config` exists in the same namespace any jar files contained in this configmap will be added into MockServer classpath.
 
-The mapping of the libs configmap can be configured as follows: 
+The mapping of the libs configmap can be configured as follows:
+
 - `app.mountedLibsConfigMapName` (default: mockserver-config) - name of the libs configmap (in the same namespace) to mount
 
 For example:

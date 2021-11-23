@@ -111,6 +111,8 @@ func TestDeployRepositoryChart(t *testing.T) {
 		URL:         "https://charts.bitnami.com/bitnami/nginx-9.5.13.tgz",
 		Index:       1,
 	})
+	require.NoError(t, err)
+
 	err = e.Deploy("nginx")
 	require.NoError(t, err)
 }
@@ -128,16 +130,19 @@ func TestParallelDeployments(t *testing.T) {
 		Path:        filepath.Join(tools.ChartsRoot, "geth"),
 		Index:       1,
 	})
+	require.NoError(t, err)
 	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "chainlink-1",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
 		Index:       2,
 	})
+	require.NoError(t, err)
 	err = e.AddChart(&environment.HelmChart{
 		ReleaseName: "chainlink-2",
 		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
 		Index:       2,
 	})
+	require.NoError(t, err)
 	err = e.DeployAll()
 	require.NoError(t, err)
 
