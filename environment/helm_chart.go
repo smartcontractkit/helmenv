@@ -120,11 +120,52 @@ func (hc *HelmChart) Deploy() error {
 }
 
 func (hc *HelmChart) DeployAndConnect() error {
-	if err := hc.Deploy(); err != nil {
+	// Deploy
+	if len(hc.URL) > 0 {
+		if err := hc.downloadChart(); err != nil {
+			return err
+		}
+	}
+	if hc.BeforeHook != nil {
+		if err := hc.BeforeHook(hc.env); err != nil {
+			return err
+		}
+	}
+	if err := hc.deployChart(); err != nil {
 		return err
 	}
-	if err := hc.Connect(); err != nil {
+	if err := hc.enumerateApps(); err != nil {
 		return err
+	}
+	if err := hc.fetchPods(); err != nil {
+		return err
+	}
+	if err := hc.updateChartSettings(); err != nil {
+		return err
+	}
+
+	// Connect
+	var rangeErr error
+	hc.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
+		rules, err := hc.makePortRules(chartConnection)
+		if err != nil {
+			rangeErr = err
+			return false
+		}
+		if err := hc.connectPod(chartConnection, rules); err != nil {
+			rangeErr = err
+			return false
+		}
+		return true
+	})
+	if rangeErr != nil {
+		return rangeErr
+	}
+
+	if hc.AfterHook != nil {
+		if err := hc.AfterHook(hc.env); err != nil {
+			return err
+		}
 	}
 	return nil
 }
