@@ -45,6 +45,7 @@ type HelmChart struct {
 	URL              string                 `yaml:"url,omitempty" json:"url,omitempty" envconfig:"url"`
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty" envconfig:"values"`
 	Index            int                    `yaml:"index,omitempty" json:"index,omitempty" envconfig:"index"`
+	AutoConnect      bool                   `yaml:"auto_connect" json:"auto_connect" envconfig:"auto_connect"`
 	ChartConnections ChartConnections       `yaml:"chart_connections,omitempty" json:"chart_connections,omitempty" envconfig:"chart_connections"`
 	BeforeHook       Hook                   `yaml:"-" json:"-" envconfig:"-"`
 	AfterHook        Hook                   `yaml:"-" json:"-" envconfig:"-"`
@@ -70,6 +71,9 @@ func (hc *HelmChart) Init(env *Environment) error {
 func (hc *HelmChart) Connect() error {
 	var rangeErr error
 	hc.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
+		if len(chartConnection.LocalPorts) > 0 {
+			return true
+		}
 		rules, err := hc.makePortRules(chartConnection)
 		if err != nil {
 			rangeErr = err
@@ -110,6 +114,11 @@ func (hc *HelmChart) Deploy() error {
 	}
 	if err := hc.updateChartSettings(); err != nil {
 		return err
+	}
+	if hc.AutoConnect {
+		if err := hc.Connect(); err != nil {
+			return err
+		}
 	}
 	if hc.AfterHook != nil {
 		if err := hc.AfterHook(hc.env); err != nil {
