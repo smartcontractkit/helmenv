@@ -19,7 +19,7 @@ spec:
             name: geth-cm
       containers:
         - name: geth-network
-          image: ethereum/client-go:v1.10.3
+          image: {{ .Values.geth.image.image }}:{{ .Values.geth.image.version }}
           command: [ "sh", "./root/init.sh" ]
           volumeMounts:
             - name : configmap-volume
