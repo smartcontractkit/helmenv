@@ -3,7 +3,7 @@ replicas: 1
 geth:
   image:
     image: ethereum/client-go
-    version: v1.10.3
+    version: v1.10.13
 
 resources:
   requests:
