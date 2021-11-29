@@ -379,7 +379,8 @@ func (k *Environment) removeNamespace() error {
 }
 
 // runGoForwarder runs port forwarder as a goroutine
-func (k *Environment) runGoForwarder(podName string, portRules []string) error {
+func (k *Environment) runGoForwarder(chartConnection *ChartConnection, portRules []string) error {
+	podName := chartConnection.PodName
 	roundTripper, upgrader, err := spdy.RoundTripperFor(k.k8sConfig)
 	if err != nil {
 		return err
@@ -416,6 +417,22 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 		log.Info().Str("Pod", podName).Msgf("%s", msg)
 	}
 	k.forwarders = append(k.forwarders, forwarder)
+	forwardedPorts, err := forwarder.GetPorts()
+	if err != nil {
+		return err
+	}
+	for portName, port := range chartConnection.RemotePorts {
+		for _, forwardedPort := range forwardedPorts {
+			fpr := int(forwardedPort.Remote)
+			if port == fpr {
+				if chartConnection.LocalPorts == nil {
+					chartConnection.LocalPorts = map[string]int{}
+				}
+				fpl := int(forwardedPort.Local)
+				chartConnection.LocalPorts[portName] = fpl
+			}
+		}
+	}
 	return nil
 }
 
