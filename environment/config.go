@@ -10,12 +10,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"os"
 	"sort"
+	"time"
 )
 
 // Config represents the full configuration of an environment, it can either be defined
 // programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
 	Path            string                           `yaml:"-" json:"-" envconfig:"config_path"`
+	QPS             float32                          `yaml:"qps" json:"qps" envconfig:"qps" default:"50"`
+	Burst           int                              `yaml:"burst" json:"burst" envconfig:"burst" default:"50"`
+	Timeout         time.Duration                    `yaml:"timeout" json:"timeout" envconfig:"timeout" default:"3m"`
 	Persistent      bool                             `yaml:"persistent" json:"persistent" envconfig:"persistent"`
 	NamespacePrefix string                           `yaml:"namespace_prefix,omitempty" json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
 	Namespace       string                           `yaml:"namespace,omitempty" json:"namespace,omitempty" envconfig:"namespace"`

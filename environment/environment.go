@@ -55,6 +55,7 @@ func NewEnvironment(config *Config) (*Environment, error) {
 	if config.Charts == nil {
 		config.Charts = map[string]*HelmChart{}
 	}
+	defaultK8sConfig(config, kc)
 	he := &Environment{
 		Config:    config,
 		k8sClient: ks,
@@ -416,4 +417,10 @@ func (k *Environment) runGoForwarder(podName string, portRules []string) error {
 	}
 	k.forwarders = append(k.forwarders, forwarder)
 	return nil
+}
+
+func defaultK8sConfig(config *Config, kc *rest.Config) {
+	kc.QPS = config.QPS
+	kc.Burst = config.Burst
+	kc.Timeout = config.Timeout
 }
