@@ -38,7 +38,7 @@ func main() {
 				Name:    "new",
 				Aliases: []string{"n"},
 				Usage:   "create new environment from preset file",
-				Flags:   []cli.Flag{
+				Flags: []cli.Flag{
 					presetFlag,
 					&cli.StringFlag{
 						Name:     "outputFile",
@@ -46,14 +46,25 @@ func main() {
 						Usage:    "file path for the outputted environment config",
 						Required: false,
 					},
+					&cli.StringFlag{
+						Name:     "chartsRoot",
+						Aliases:  []string{"c"},
+						Usage:    "override charts root dir",
+						Required: false,
+					},
 				},
 				Action: func(c *cli.Context) error {
 					preset := c.String("preset")
+					var chartsRoot string
+					chartsRoot = c.String("chartsRoot")
+					if chartsRoot == "" {
+						chartsRoot = tools.ChartsRoot
+					}
 					// Override the `Path` key in Config to dictate where the file is written
 					if err := os.Setenv("CONFIG_PATH", c.String("outputFile")); err != nil {
 						return err
 					}
-					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, preset)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(chartsRoot, preset)
 					if err != nil {
 						return err
 					}
