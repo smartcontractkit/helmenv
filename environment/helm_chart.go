@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/cmd/cp"
+	"math/rand"
 	"net/url"
 	"os"
 	"path"
@@ -126,6 +131,23 @@ func (hc *HelmChart) Deploy() error {
 		}
 	}
 	return nil
+}
+
+// CopyToPod copies src to a particular container
+func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
+	hc.env.k8sConfig.APIPath = "/api"
+	hc.env.k8sConfig.GroupVersion = &schema.GroupVersion{Version: "v1"} // this targets the core api groups so the url path will be /api/v1
+	hc.env.k8sConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
+	ioStreams, in, out, errOut := genericclioptions.NewTestIOStreams()
+	copyOptions := cp.NewCopyOptions(ioStreams)
+	copyOptions.Clientset = hc.env.k8sClient
+	copyOptions.ClientConfig = hc.env.k8sConfig
+	copyOptions.Container = containername
+	err := copyOptions.Run([]string{src, dst})
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
+	}
+	return in, out, errOut, nil
 }
 
 // ExecuteInPod is similar to kubectl exec
