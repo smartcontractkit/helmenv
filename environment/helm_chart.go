@@ -4,17 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/kubectl/pkg/cmd/cp"
-	"math/rand"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-
 	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -24,16 +13,21 @@ import (
 	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/kubectl/pkg/cmd/cp"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 const (
-	// MaxPort max port value for forwarding
-	MaxPort = 50000
-	// MinPort min port value for forwarding
-	MinPort = 20000
 	// AppEnumerationLabelKey label used to enumerate instances of the same app to ease access
 	AppEnumerationLabelKey = "app"
 	// InstanceEnumerationLabelKey additional label to enumerate app instances
