@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/rand"
 	"net/url"
 	"os"
 	"path"
@@ -370,15 +369,10 @@ func (hc *HelmChart) uniqueAppLabels(selector string) ([]string, error) {
 func (hc *HelmChart) makePortRules(chartConnection *ChartConnection) ([]string, error) {
 	rules := make([]string, 0)
 	for portName, port := range chartConnection.RemotePorts {
-		freePort := rand.Intn(MaxPort-MinPort) + MinPort
 		if portName == "" {
 			return nil, fmt.Errorf("port %d must be named in helm chart", port)
 		}
-		if chartConnection.LocalPorts == nil {
-			chartConnection.LocalPorts = map[string]int{}
-		}
-		chartConnection.LocalPorts[portName] = freePort
-		rules = append(rules, fmt.Sprintf("%d:%d", freePort, port))
+		rules = append(rules, fmt.Sprintf(":%d", port))
 	}
 	return rules, nil
 }
@@ -387,5 +381,5 @@ func (hc *HelmChart) connectPod(connectionInfo *ChartConnection, rules []string)
 	if len(rules) == 0 {
 		return nil
 	}
-	return hc.env.runGoForwarder(connectionInfo.PodName, rules)
+	return hc.env.runGoForwarder(connectionInfo, rules)
 }
