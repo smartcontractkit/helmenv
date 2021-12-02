@@ -3,14 +3,17 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"time"
+
 	"github.com/imdario/mergo"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/chaos"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/json"
-	"os"
-	"sort"
-	"time"
 )
 
 // Config represents the full configuration of an environment, it can either be defined
@@ -67,7 +70,12 @@ func (c Charts) ExecuteInPod(chartName string, podNameSubstring string, podIndex
 // two
 func (c Charts) Decode(value string) error {
 	// Support the use of files for unmarshaling charts JSON
-	if _, err := os.Stat(value); err == nil {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(filepath.Join(workingDir, value)); err == nil {
+		log.Debug().Str("Filepath", filepath.Join(workingDir, value)).Msg("Reading Chart values from file")
 		b, err := os.ReadFile(value)
 		if err != nil {
 			return err
