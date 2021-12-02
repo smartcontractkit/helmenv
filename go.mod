@@ -17,7 +17,9 @@ require (
 	helm.sh/helm/v3 v3.7.1
 	k8s.io/api v0.22.3
 	k8s.io/apimachinery v0.22.3
+	k8s.io/cli-runtime v0.22.1
 	k8s.io/client-go v0.22.3
+	k8s.io/kubectl v0.22.1
 )
 
 require (
@@ -35,6 +37,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/containerd/containerd v1.5.8 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
@@ -49,8 +52,10 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
+	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/fvbommel/sortorder v1.0.1 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
@@ -80,6 +85,7 @@ require (
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
+	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
@@ -136,11 +142,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apiextensions-apiserver v0.22.1 // indirect
 	k8s.io/apiserver v0.22.1 // indirect
-	k8s.io/cli-runtime v0.22.1 // indirect
 	k8s.io/component-base v0.22.1 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
-	k8s.io/kubectl v0.22.1 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
 	oras.land/oras-go v0.4.0 // indirect
 	sigs.k8s.io/kustomize/api v0.8.11 // indirect

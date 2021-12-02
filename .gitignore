@@ -39,3 +39,4 @@ bin/
 
 # Testing log dumps
 environment/test-artifacts/
+charts-test-file.json
