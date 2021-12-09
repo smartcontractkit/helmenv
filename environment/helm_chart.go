@@ -70,9 +70,6 @@ func (hc *HelmChart) Init(env *Environment) error {
 func (hc *HelmChart) Connect() error {
 	var rangeErr error
 	hc.ChartConnections.Range(func(key string, chartConnection *ChartConnection) bool {
-		if len(chartConnection.LocalPorts) > 0 {
-			return true
-		}
 		rules, err := hc.makePortRules(chartConnection)
 		if err != nil {
 			rangeErr = err
