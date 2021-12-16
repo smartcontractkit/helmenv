@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sol
+spec:
+  selector:
+    matchLabels:
+      app: sol
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: sol
+        release: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: vol
+          configMap:
+            name: sol-cm
+      containers:
+        - name: sol-val
+          image: {{ .Values.sol.image.image }}:{{ .Values.sol.image.version }}
+          volumeMounts:
+            - mountPath: /root/.config/solana/cli
+              name: vol
+          ports:
+            - name: http-rpc
+              containerPort: 8899
+            - name: ws-rpc
+              containerPort: 8900
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+
