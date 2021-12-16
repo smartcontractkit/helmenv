@@ -1,0 +1,14 @@
+replicas: 1
+
+sol:
+  image:
+    image: f4hrenh9it/sol-val
+    version: v1
+
+resources:
+  requests:
+    cpu: 800m
+    memory: 2000Mi
+  limits:
+    cpu: 1600m
+    memory: 4000Mi
