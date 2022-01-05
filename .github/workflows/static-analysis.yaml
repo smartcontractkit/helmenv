@@ -1,7 +1,7 @@
 name: Static Analysis
 on:
   push:
-    branches: [main]
+    branches: ["master"]
   schedule:
     - cron: '23 19 * * 4'
 jobs:
