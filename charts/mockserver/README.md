@@ -73,19 +73,21 @@ Double check the correct arguments have been passed to the pod, as follows:
 
 ```bash
 kubectl -n mockserver logs -l app=mockserver,release=mockserver
-``` 
+```
 
 ### Detailed MockServer Configuration
 
 If a configmap called `mockserver-config` exists in the same namespace this will be mapped into the MockServer container under the `mountPath` `/config`.
 This configmap can be used to configure MockServer by containing a `mockserver.properties` file and other related configuration files such as a:
+
 - [json expectation initialization](https://www.mock-server.com/mock_server/initializing_expectations.html), or
 - custom [TLS CA, X.509 Certificate or Private Key](https://www.mock-server.com/mock_server/HTTPS_TLS.html#configuration)
-The `mockserver.properties` file should load these additional files from the directory `/config` which is the `mountPath` for the configmap. 
+The `mockserver.properties` file should load these additional files from the directory `/config` which is the `mountPath` for the configmap.
 
-See [MockServer Configuration](https://www.mock-server.com/mock_server/configuration_properties.html) for details of all configuration options. 
+See [MockServer Configuration](https://www.mock-server.com/mock_server/configuration_properties.html) for details of all configuration options.
   
-The mapping of the configuration configmap can be configured as follows: 
+The mapping of the configuration configmap can be configured as follows:
+
 - `app.mountedConfigMapName` (default: mockserver-config) - name of the configuration configmap (in the same namespace) to mount
 - `app.propertiesFileName` (default: mockserver.properties) - path of the property file in the configmap
 
