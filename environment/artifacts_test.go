@@ -41,13 +41,14 @@ func TestArtifacts(t *testing.T) {
 	err = e.ConnectAll()
 	require.NoError(t, err)
 
-	e.Artifacts.DumpTestResult(artifactDirectory, "chainlink")
+	err = e.Artifacts.DumpTestResult(artifactDirectory, "chainlink")
+	require.NoError(t, err)
 
 	// Overall dump dir exists
 	_, err = os.Stat(artifactDirectory)
 	require.NoError(t, err, fmt.Sprintf("Expected the directory '%s' to exist", artifactDirectory))
 
-	filepath.WalkDir(artifactDirectory,
+	err = filepath.WalkDir(artifactDirectory,
 		func(path string, d fs.DirEntry, err error) error {
 			if d.IsDir() {
 				f, err := os.Open(path)
@@ -55,7 +56,7 @@ func TestArtifacts(t *testing.T) {
 					require.NoError(t, err, "Error opening directory path")
 					return err
 				}
-				defer f.Close()
+				defer require.NoError(t, f.Close(), "Error closing file")
 
 				_, err = f.Readdirnames(1)
 				if err != nil {
@@ -66,6 +67,7 @@ func TestArtifacts(t *testing.T) {
 			return err
 		},
 	)
+	require.NoError(t, err)
 
 	// Cleanup
 	err = os.RemoveAll(artifactDirectory)
