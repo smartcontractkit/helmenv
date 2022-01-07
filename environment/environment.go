@@ -153,7 +153,6 @@ func (k *Environment) Disconnect() {
 	for _, forwarder := range k.forwarders {
 		forwarder.Close()
 	}
-	return
 }
 
 // Teardown tears down the helm releases

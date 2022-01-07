@@ -21,9 +21,9 @@ func TestChartsFile(t *testing.T) {
 	chartsTestFile, err := os.Create(chartsTestFilePath)
 	require.NoError(t, err)
 	defer func() { // Cleanup after test
-		chartsTestFile.Close()
+		require.NoError(t, chartsTestFile.Close(), "Error closing test charts file")
 		if _, err = os.Stat(chartsTestFilePath); err == nil {
-			os.Remove(chartsTestFilePath)
+			require.NoError(t, os.Remove(chartsTestFilePath), "Error deleting test charts file")
 		}
 	}()
 
