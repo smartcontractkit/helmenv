@@ -161,7 +161,11 @@ func (k *Environment) Teardown() error {
 	for _, c := range k.Charts {
 		log.Debug().Str("Release", c.ReleaseName).Msg("Uninstalling Helm release")
 		if _, err := action.NewUninstall(c.actionConfig).Run(c.ReleaseName); err != nil {
-			return err
+			if strings.Contains(err.Error(), "release: not found") { // If the release isn't installed, assume it didn't make it that far
+				log.Warn().Str("Release Name", c.ReleaseName).Msg("Unable to find release to uninstall it")
+			} else {
+				return err
+			}
 		}
 	}
 	if err := k.removeNamespace(); err != nil {
