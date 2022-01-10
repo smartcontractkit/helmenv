@@ -4,10 +4,12 @@ import (
 	"time"
 )
 
-// NetworkBandwidth struct with objects for Network Bandwidth testing
+// NetworkBandwidth struct with objects for NetworkConfig Bandwidth testing
 type NetworkBandwidth struct {
 	Base
-	TargetAppLabel string
+	Mode       string
+	LabelKey   string
+	LabelValue string
 	// kbps
 	Rate     string
 	Limit    int

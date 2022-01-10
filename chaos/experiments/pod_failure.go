@@ -7,6 +7,7 @@ import (
 // PodFailure struct contains objects for Pod Failure testing
 type PodFailure struct {
 	Base
+	Mode       string
 	LabelKey   string
 	LabelValue string
 	Duration   time.Duration
