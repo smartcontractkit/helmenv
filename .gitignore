@@ -31,7 +31,7 @@ logs/
 bin/
 
 # ide
-
+.vscode/
 *.idea
 
 # Test yaml files

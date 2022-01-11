@@ -48,6 +48,9 @@ func TestArtifacts(t *testing.T) {
 	_, err = os.Stat(artifactDirectory)
 	require.NoError(t, err, fmt.Sprintf("Expected the directory '%s' to exist", artifactDirectory))
 
+	// Cleanup
+	defer require.NoError(t, os.RemoveAll(artifactDirectory), "Failed to remove testing artifacts")
+
 	err = filepath.WalkDir(artifactDirectory,
 		func(path string, d fs.DirEntry, err error) error {
 			if d.IsDir() {
@@ -60,7 +63,7 @@ func TestArtifacts(t *testing.T) {
 
 				_, err = f.Readdirnames(1)
 				if err != nil {
-					require.NoError(t, err, fmt.Sprintf("Expected directory '%s' ton ot be empty", path))
+					require.NoError(t, err, fmt.Sprintf("Expected directory '%s' to not be empty", path))
 					return err
 				}
 			}
@@ -68,8 +71,4 @@ func TestArtifacts(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	// Cleanup
-	err = os.RemoveAll(artifactDirectory)
-	require.NoError(t, err, fmt.Sprintf("Error trying to delete '%s'", artifactDirectory))
 }
