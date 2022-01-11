@@ -49,7 +49,7 @@ func TestArtifacts(t *testing.T) {
 	require.NoError(t, err, fmt.Sprintf("Expected the directory '%s' to exist", artifactDirectory))
 
 	// Cleanup
-	defer os.RemoveAll(artifactDirectory)
+	defer require.NoError(t, os.RemoveAll(artifactDirectory), "Failed to remove testing artifacts")
 
 	err = filepath.WalkDir(artifactDirectory,
 		func(path string, d fs.DirEntry, err error) error {
