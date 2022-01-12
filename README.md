@@ -66,7 +66,7 @@ envcli chaos clear -e examples/standalone/chainlink-example-preset
 To remove env use
 
 ```sh
-envcli remove -e -e my_env.yaml
+envcli remove -e my_env.yaml
 ```
 
 ## Usage as a library
