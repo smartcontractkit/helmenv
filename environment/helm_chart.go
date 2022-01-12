@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -20,11 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/cmd/cp"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 const (
