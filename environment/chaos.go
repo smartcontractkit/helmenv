@@ -58,3 +58,11 @@ func (k *Environment) StopChaosExperiment(id string) error {
 	}
 	return nil
 }
+
+// ClearAllChaosExperiments clears all chaos experiments
+func (k *Environment) ClearAllChaosExperiments() error {
+	if err := k.Chaos.StopAll(); err != nil {
+		return err
+	}
+	return nil
+}
