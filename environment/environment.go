@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/url"
 	"os"
@@ -364,6 +365,30 @@ func (k *Environment) configureHelm() error {
 		return err
 	}
 	settings.KubeConfig = filepath.Join(homeDir, DefaultK8sConfigPath)
+	return nil
+}
+
+// AddLabel adds a new label to a group of pods defined by selector
+func (k *Environment) AddLabel(selector string, label string) error {
+	k8sPods := k.k8sClient.CoreV1().Pods(k.Namespace)
+	podList, err := k8sPods.List(context.Background(), metaV1.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return err
+	}
+	l := strings.Split(label, "=")
+	if len(l) != 2 {
+		return errors.New("labels must be in format key=value")
+	}
+	for _, pod := range podList.Items {
+		labelPatch := fmt.Sprintf(`[{"op":"add","path":"/metadata/labels/%s","value":"%s" }]`, l[0], l[1])
+		_, err := k8sPods.Patch(context.Background(), pod.GetName(), types.JSONPatchType, []byte(labelPatch), metaV1.PatchOptions{})
+		if err != nil {
+			return errors.Wrapf(err, "failed to update labels %s for pod %s", labelPatch, pod.Name)
+		}
+	}
+	log.Debug().Str("Selector", selector).Str("Label", label).Msg("Updated label")
 	return nil
 }
 
