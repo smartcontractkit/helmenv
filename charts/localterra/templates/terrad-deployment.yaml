@@ -6,13 +6,11 @@ metadata:
     release: {{ .Release.Name }}
   name: terrad
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: terrad
       release: {{ .Release.Name }}
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:

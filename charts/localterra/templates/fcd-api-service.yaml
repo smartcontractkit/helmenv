@@ -5,7 +5,11 @@ metadata:
   labels:
     release: {{ .Release.Name }}
 spec:
+  type: ClusterIP
   ports:
     - name: "fcd"
       port: 3060
       targetPort: 3060
+  selector:
+    app: fcd-api
+    release: {{ .Release.Name }}
