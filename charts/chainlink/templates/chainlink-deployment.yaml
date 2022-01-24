@@ -1,8 +1,25 @@
 apiVersion: apps/v1
+{{ if .Values.db.stateful }}
+kind: StatefulSet
+{{ else }}
 kind: Deployment
+{{ end }}
 metadata:
   name: {{ .Release.Name }}-node
 spec:
+  {{ if .Values.db.stateful }}
+  serviceName: {{ .Release.Name }}-service
+  podManagementPolicy: Parallel
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.db.capacity }}
+  {{ end }}
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
@@ -58,6 +75,12 @@ spec:
             limits:
               memory: {{ .Values.db.resources.limits.memory }}
               cpu: {{ .Values.db.resources.limits.cpu }}
+          {{ if .Values.db.stateful }}
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres
+              subPath: postgres-db
+          {{ end }}
         - name: node
           image: {{ .Values.chainlink.image.image }}:{{ .Values.chainlink.image.version }}
           imagePullPolicy: IfNotPresent
