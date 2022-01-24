@@ -6,19 +6,20 @@ metadata:
     release: {{ .Release.Name }}
   name: terrad
 spec:
+  type: ClusterIP
   ports:
-    - name: "26657"
+    - name: "tendermint"
       port: 26657
-      targetPort: 26657
-    - name: "1317"
+      targetPort: tendermint
+    - name: "lcd"
       port: 1317
-      targetPort: 1317
-    - name: "9090"
+      targetPort: lcd
+    - name: "tendermint-grpc"
       port: 9090
-      targetPort: 9090
-    - name: "9091"
+      targetPort: tendermint-grpc
+    - name: "web-grpc"
       port: 9091
-      targetPort: 9091
+      targetPort: web-grpc
   selector:
     app: terrad
     release: {{ .Release.Name }}

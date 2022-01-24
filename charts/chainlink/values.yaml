@@ -12,6 +12,8 @@ chainlink:
       cpu: 450m
       memory: 1024Mi
 db:
+  stateful: false
+  capacity: 1Gi
   resources:
     requests:
       cpu: 350m
