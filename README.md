@@ -89,6 +89,16 @@ ports:
       containerPort: 8544
 ```
 
+## Charts debugging
+Rendering can be done using `helm template $CHART $CHART_DIR --debug`
+```
+helm template chainlink-deployment.yaml charts/chainlink --debug
+```
+Pick any preset from `examples/preset` and run your chart
+```
+envcli new -p cl-versions.yaml
+```
+
 TODO:
 
 - [x] Deploy a chart

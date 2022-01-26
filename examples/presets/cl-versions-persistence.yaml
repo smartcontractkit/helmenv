@@ -1,0 +1,27 @@
+namespace_prefix: chainlink
+charts:
+  chainlink:
+    index: 1
+    values:
+      replicas: 1
+      chainlink:
+        versions:
+          - develop.52c8396ee649c21203eedb3b5b3b11213f90ec62
+          - develop.f149ecd421a3667dcd4b603fa69bda05e34d602d
+          - develop.4bc99afb22dca23469d9a7bc2bdfa7ea49028ae6
+        image:
+          image: "public.ecr.aws/chainlink/chainlink"
+      db:
+        stateful: true
+        capacity: 2Gi
+      env:
+        eth_url: "ws://sol:8990"
+        eth_disabled: "true"
+        USE_LEGACY_ETH_ENV_VARS: "true"
+        feature_external_initiators: "true"
+        FEATURE_OFFCHAIN_REPORTING2: "true"
+        P2P_NETWORKING_STACK: "V2"
+        P2PV2_LISTEN_ADDRESSES: "0.0.0.0:6690"
+        P2PV2_DELTA_DIAL: "5s"
+        P2PV2_DELTA_RECONCILE: "5s"
+        p2p_listen_port: "0"
