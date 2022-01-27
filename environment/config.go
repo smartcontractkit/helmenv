@@ -33,6 +33,21 @@ type Config struct {
 // Charts represents a map of charts with some helper methods
 type Charts map[string]*HelmChart
 
+// Get returns a single Helm Chart
+func (c Charts) Get(chartName string) (*HelmChart, error) {
+	var chart *HelmChart
+	for _, co := range c {
+		if co.ReleaseName == chartName {
+			chart = co
+			break
+		}
+	}
+	if chart == nil {
+		return nil, fmt.Errorf("chart %s doesn't exist", chartName)
+	}
+	return chart, nil
+}
+
 // Connections is a helper method for simply accessing chart connections, also safely allowing method chaining
 func (c Charts) Connections(chart string) *ChartConnections {
 	if chart, ok := c[chart]; !ok {

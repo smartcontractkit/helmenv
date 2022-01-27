@@ -174,6 +174,52 @@ func TestExecuteInPod(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestUpgrade(t *testing.T) {
+	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
+	e, err := environment.NewEnvironment(&environment.Config{})
+	defer teardown(t, e)
+	require.NoError(t, err)
+	err = e.Init(envName)
+	require.NoError(t, err)
+
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "geth",
+		Path:        filepath.Join(tools.ChartsRoot, "geth"),
+		Index:       1,
+	})
+	require.NoError(t, err)
+	err = e.AddChart(&environment.HelmChart{
+		ReleaseName: "chainlink",
+		Path:        filepath.Join(tools.ChartsRoot, "chainlink"),
+		Index:       2,
+	})
+	require.NoError(t, err)
+	err = e.DeployAll()
+	require.NoError(t, err)
+	err = e.ConnectAll()
+	require.NoError(t, err)
+
+	urls, err := e.Charts.Connections("chainlink").LocalURLsByPort("access", environment.HTTP)
+	require.NoError(t, err)
+	require.Len(t, urls, 1)
+	e.Disconnect()
+
+	chart, err := e.Charts.Get("chainlink")
+	require.NoError(t, err)
+	chart.Values = environment.ChainlinkReplicas(2, nil)
+	err = chart.Upgrade()
+	require.NoError(t, err)
+
+	err = e.ConnectAll()
+	require.NoError(t, err)
+
+	urls, err = e.Charts.Connections("chainlink").LocalURLsByPort("access", environment.HTTP)
+	require.NoError(t, err)
+	require.Len(t, urls, 2)
+
+	require.NoError(t, err)
+}
+
 func TestBeforeAndAfterHook(t *testing.T) {
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
