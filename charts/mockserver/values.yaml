@@ -7,7 +7,13 @@ app:
   mountedLibsConfigMapName: "mockserver-config"
   propertiesFileName: "mockserver.properties"
   readOnlyRootFilesystem: false
-
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
 
 image:
   repository: mockserver
@@ -32,8 +38,6 @@ ingress:
     - mockserver.local
 
 podAnnotations: {}
-
-resources: {}
 
 nodeSelector: {}
 
