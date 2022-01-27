@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"helm.sh/helm/v3/pkg/chart"
 	"net/url"
 	"os"
 	"path"
@@ -125,6 +126,31 @@ func (hc *HelmChart) Deploy() error {
 	return nil
 }
 
+// Upgrade an already deployed Helm chart with new values
+func (hc *HelmChart) Upgrade() error {
+	helmChart, err := hc.loadChart()
+	if err != nil {
+		return err
+	}
+
+	upgrader := action.NewUpgrade(hc.actionConfig)
+	upgrader.Namespace = hc.namespaceName
+	upgrader.Timeout = HelmInstallTimeout
+	// blocks until all podsPortsInfo are healthy
+	upgrader.Wait = true
+
+	if _, err := upgrader.Run(hc.ReleaseName, helmChart, hc.Values); err != nil {
+		return err
+	}
+	if err := hc.enumerateApps(); err != nil {
+		return err
+	}
+	if err := hc.fetchPods(); err != nil {
+		return err
+	}
+	return hc.updateChartSettings()
+}
+
 // CopyToPod copies src to a particular container
 func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 	hc.env.k8sConfig.APIPath = "/api"
@@ -216,34 +242,42 @@ func (hc *HelmChart) init() error {
 	return nil
 }
 
-// deployChart deploys the helm Charts
-func (hc *HelmChart) deployChart() error {
+func (hc *HelmChart) loadChart() (*chart.Chart, error) {
 	log.Info().Str("Path", hc.Path).
 		Str("Release", hc.ReleaseName).
 		Str("Namespace", hc.namespaceName).
 		Interface("Override values", hc.Values).
 		Msg("Installing Helm chart")
-	chart, err := loader.Load(hc.Path)
+	loadedChart, err := loader.Load(hc.Path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	chart.Values, err = chartutil.CoalesceValues(chart, hc.Values)
+	loadedChart.Values, err = chartutil.CoalesceValues(loadedChart, hc.Values)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	log.Debug().Interface("Values", chart.Values).Msg("Merged chart values")
+	log.Debug().Interface("Values", loadedChart.Values).Msg("Merged chart values")
+	return loadedChart, nil
+}
 
+// deployChart deploys the helm Charts
+func (hc *HelmChart) deployChart() error {
 	install := action.NewInstall(hc.actionConfig)
 	install.Namespace = hc.namespaceName
 	install.ReleaseName = hc.ReleaseName
 	install.Timeout = HelmInstallTimeout
 	// blocks until all podsPortsInfo are healthy
 	install.Wait = true
-	_, err = install.Run(chart, nil)
+
+	helmChart, err := hc.loadChart()
 	if err != nil {
 		return err
 	}
+	_, err = install.Run(helmChart, nil)
+	if err != nil {
+		return err
+	}
+
 	log.Info().
 		Str("Namespace", hc.namespaceName).
 		Str("Release", hc.ReleaseName).

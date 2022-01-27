@@ -252,15 +252,9 @@ func (k *Environment) SyncConfig() error {
 
 // Deploy a single chart
 func (k *Environment) Deploy(chartName string) error {
-	var chart *HelmChart
-	for _, c := range k.Charts {
-		if c.ReleaseName == chartName {
-			chart = c
-			break
-		}
-	}
-	if chart == nil {
-		return fmt.Errorf("chart %s doesn't exist", chartName)
+	chart, err := k.Charts.Get(chartName)
+	if err != nil {
+		return err
 	}
 	return chart.Deploy()
 }
@@ -284,6 +278,18 @@ func (k *Environment) DeployAll() error {
 		return err
 	}
 	return nil
+}
+
+// Upgrade a single chart
+func (k *Environment) Upgrade(chartName string) error {
+	chart, err := k.Charts.Get(chartName)
+	if err != nil {
+		return err
+	}
+	if err := chart.Upgrade(); err != nil {
+		return err
+	}
+	return k.SyncConfig()
 }
 
 // AddChart adds chart to deploy

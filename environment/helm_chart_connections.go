@@ -46,9 +46,6 @@ func (cc ChartConnections) Range(f func(key string, chartConnection *ChartConnec
 // return an error if the key is a duplicate
 func (cc ChartConnections) Store(app, instance, name string, chartConnection *ChartConnection) error {
 	mapKey := cc.mapKey(app, instance, name)
-	if _, ok := cc[mapKey]; ok {
-		return fmt.Errorf("chart connection key of '%s' is already stored in the map", mapKey)
-	}
 	cc[mapKey] = chartConnection
 	return nil
 }
