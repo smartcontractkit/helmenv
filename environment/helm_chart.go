@@ -142,6 +142,14 @@ func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*b
 	return in, out, errOut, nil
 }
 
+func (hc *HelmChart) DeletePod(podName string) error {
+	err := hc.env.k8sClient.CoreV1().Pods(hc.namespaceName).Delete(context.Background(), podName, metaV1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // ExecuteInPod is similar to kubectl exec
 func (hc *HelmChart) ExecuteInPod(podName string, containerName string, command []string) ([]byte, []byte, error) {
 	req := hc.env.k8sClient.CoreV1().RESTClient().Post().
