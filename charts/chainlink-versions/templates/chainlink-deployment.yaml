@@ -1,0 +1,6 @@
+{{- range $idx, $clVars := .Values.versions }}
+  {{- include "chainlink.deployment" (dict "Values" $clVars "Release" $.Release "idx" $idx) }}
+  {{- include "chainlink.service" (dict "Values" $clVars "Release" $.Release "idx" $idx) }}
+  {{- include "chainlink.configMap" (dict "Values" $clVars "Release" $.Release "idx" $idx) }}
+  {{- include "chainlink.secret" (dict "Values" $clVars "Release" $.Release "idx" $idx) }}
+{{ end }}

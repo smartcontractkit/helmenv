@@ -105,5 +105,6 @@ TODO:
 Presets:
 
 - [x] Chainlink <-> ETH preset
+- [x] Chainlink compatibility preset
 - [x] Chainlink <-> Relay preset
-- [ ] Chainlink <-> Multinode network x2 preset (reorg testing)
+- [ ] Chainlink <-> Multinode networks preset (reorg testing)

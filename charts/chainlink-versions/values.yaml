@@ -1,0 +1,111 @@
+versions:
+  - chainlink:
+      image: public.ecr.aws/z0b1w9r9/chainlink
+      version: develop.d2b337227bc5d4c4b6ee4f605017f205e01e5d16
+      web_port: 6688
+      p2p_port: 8090
+      resources:
+        requests:
+          cpu: 450m
+          memory: 1024Mi
+        limits:
+          cpu: 450m
+          memory: 1024Mi
+    db:
+      stateful: false
+      capacity: 1Gi
+      resources:
+        requests:
+          cpu: 350m
+          memory: 1024Mi
+        limits:
+          cpu: 350m
+          memory: 1024Mi
+    replicas: 1
+    env:
+      database_url: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
+      database_name: chainlink
+      eth_url: ws://geth:8546
+      eth_chain_id: "1337"
+      allow_origins: '*'
+      chainlink_dev: "true"
+      eth_disabled: "false"
+      feature_external_initiators: "false"
+      chainlink_pgpassword: node
+      chainlink_port: "6688"
+      chainlink_tls_port: "0"
+      default_http_allow_unrestricted_network_access: "true"
+      enable_bulletproof_tx_manager: "true"
+      feature_offchain_reporting: "true"
+      json_console: "false"
+      log_level: debug
+      max_export_html_threads: "2"
+      minimum_contract_payment_link_juels: "0"
+      ocr_trace_logging: "true"
+      p2p_listen_ip: 0.0.0.0
+      p2p_listen_port: "6690"
+      root: ./clroot
+      secure_cookies: "false"
+      eth_max_in_flight_transactions: "5000"
+      keeper_default_transaction_queue_depth: "1"
+      keeper_registry_sync_interval: "5s"
+      keeper_minimum_required_confirmations: "1"
+      keeper_registry_perform_gas_overhead: "150000"
+      explorer_url:
+      explorer_access_key:
+      explorer_secret:
+  - chainlink:
+      image: public.ecr.aws/chainlink/chainlink
+      version: 1.0.1
+      web_port: 6688
+      p2p_port: 8090
+      resources:
+        requests:
+          cpu: 450m
+          memory: 1024Mi
+        limits:
+          cpu: 450m
+          memory: 1024Mi
+    db:
+      stateful: false
+      capacity: 1Gi
+      resources:
+        requests:
+          cpu: 350m
+          memory: 1024Mi
+        limits:
+          cpu: 350m
+          memory: 1024Mi
+    replicas: 1
+    env:
+      database_url: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
+      database_name: chainlink
+      eth_url: ws://geth:8546
+      eth_chain_id: "1337"
+      allow_origins: '*'
+      chainlink_dev: "true"
+      eth_disabled: "false"
+      feature_external_initiators: "false"
+      chainlink_pgpassword: node
+      chainlink_port: "6688"
+      chainlink_tls_port: "0"
+      default_http_allow_unrestricted_network_access: "true"
+      enable_bulletproof_tx_manager: "true"
+      feature_offchain_reporting: "true"
+      json_console: "false"
+      log_level: debug
+      max_export_html_threads: "2"
+      minimum_contract_payment_link_juels: "0"
+      ocr_trace_logging: "true"
+      p2p_listen_ip: 0.0.0.0
+      p2p_listen_port: "6690"
+      root: ./clroot
+      secure_cookies: "false"
+      eth_max_in_flight_transactions: "5000"
+      keeper_default_transaction_queue_depth: "1"
+      keeper_registry_sync_interval: "5s"
+      keeper_minimum_required_confirmations: "1"
+      keeper_registry_perform_gas_overhead: "150000"
+      explorer_url:
+      explorer_access_key:
+      explorer_secret:
