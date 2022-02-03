@@ -83,7 +83,7 @@ spec:
           {{ end }}
         - name: node
           image: {{ .Values.chainlink.image.image }}:{{ .Values.chainlink.image.version }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - node
             - start
