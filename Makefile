@@ -12,7 +12,7 @@ golangci: ## install golangci-linter
 
 .PHONY: test
 test: # run all programmatic interaction tests
-	go test -v -count 1 ./...
+	go test -v -p 5 ./...
 
 .PHONY: install_cli
 install_cli: # installs CLI
