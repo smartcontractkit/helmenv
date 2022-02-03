@@ -24,6 +24,8 @@ func teardown(t *testing.T, e *environment.Environment) {
 }
 
 func TestCanDeployAll(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -60,6 +62,8 @@ func TestCanDeployAll(t *testing.T) {
 }
 
 func TestMultipleChartsSeparate(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -118,6 +122,8 @@ func TestDeployRepositoryChart(t *testing.T) {
 }
 
 func TestParallelDeployments(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -151,6 +157,8 @@ func TestParallelDeployments(t *testing.T) {
 }
 
 func TestExecuteInPod(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -175,6 +183,8 @@ func TestExecuteInPod(t *testing.T) {
 }
 
 func TestUpgrade(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -221,6 +231,8 @@ func TestUpgrade(t *testing.T) {
 }
 
 func TestBeforeAndAfterHook(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -253,6 +265,8 @@ func TestBeforeAndAfterHook(t *testing.T) {
 }
 
 func TestAutoConnect(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
@@ -276,9 +290,11 @@ func TestAutoConnect(t *testing.T) {
 }
 
 func TestCanConnectProgrammatically(t *testing.T) {
+	t.Parallel()
 	// TODO
 }
 
 func TestCanConnectCLI(t *testing.T) {
+	t.Parallel()
 	// TODO
 }

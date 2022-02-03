@@ -13,6 +13,8 @@ import (
 
 // Ensures that connections are collected in consistent order, ensuring that RemoteURLs and LocalURLs match each other
 func TestURLsByPort(t *testing.T) {
+	t.Parallel()
+
 	envName := fmt.Sprintf("test-env-%s", uuid.NewV4().String())
 	e, err := environment.NewEnvironment(&environment.Config{})
 	defer teardown(t, e)
