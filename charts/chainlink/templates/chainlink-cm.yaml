@@ -10,3 +10,5 @@ data:
     notreal@fakeemail.ch
     twochains
   node-password: T.tLHkcmwePT/p,]sYuntjwHKAsrhm#4eRs4LuKHwvHejWYAC2JP4M8HimwgmbaZ
+  init.sql: |
+    CREATE EXTENSION pg_stat_statements;
