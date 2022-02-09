@@ -40,6 +40,13 @@ spec:
       containers:
         - name: chainlink-db
           image: postgres:11.6
+          command:
+            - docker-entrypoint.sh
+          args:
+            - "-c"
+            - "shared_preload_libraries=pg_stat_statements"
+            - "-c"
+            - "pg_stat_statements.track=all"
           ports:
             - name: postgres
               containerPort: 5432
