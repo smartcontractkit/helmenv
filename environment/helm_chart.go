@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"helm.sh/helm/v3/pkg/chart"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"helm.sh/helm/v3/pkg/chart"
 
 	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
@@ -337,6 +339,10 @@ func (hc *HelmChart) addInstanceLabel(app string) error {
 	if err != nil {
 		return err
 	}
+	// Ensures that instance label applies in order to port mapping
+	sort.Slice(l.Items, func(i, j int) bool {
+		return l.Items[i].Status.PodIP < l.Items[j].Status.PodIP
+	})
 	for i, pod := range l.Items {
 		labelPatch := fmt.Sprintf(`[{"op":"add","path":"/metadata/labels/%s","value":"%d" }]`, "instance", i)
 		_, err := k8sPods.Patch(context.Background(), pod.GetName(), types.JSONPatchType, []byte(labelPatch), metaV1.PatchOptions{})
