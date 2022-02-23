@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
@@ -98,6 +99,33 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 		return nil, err
 	}
 	return e, e.SyncConfig()
+}
+
+// DeploySoakEnvironment is used specifically for deploying soak testing environments. First the config is deployed as
+// normal, then a soak runner is deployed with proper configuration to run the specified soak test
+func DeploySoakEnvironment(config *Config, soakTestName, chartDirectory string) (*Environment, error) {
+	env, err := DeployEnvironment(config, chartDirectory)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Str("Test Name", soakTestName).
+		Str("Namespace", env.Namespace).
+		Msg("Deploying soak runner to run soak test")
+	// Create a config map with an env variable folder to send with the helm chart
+	// Then have test read from there
+	soakConfigBytes, err := os.ReadFile(env.Path)
+	if err != nil {
+		return env, err
+	}
+
+	soakVals := map[string]interface{}{
+		"soak_test_runner": map[string]string{
+			"test_name":            soakTestName,
+			"config_file_contents": string(soakConfigBytes),
+		},
+	}
+	err = env.DeployWithValues("soak-test-runner", soakVals)
+	return env, err
 }
 
 // LoadEnvironment loads an already deployed environment from config
@@ -256,6 +284,16 @@ func (k *Environment) Deploy(chartName string) error {
 	if err != nil {
 		return err
 	}
+	return chart.Deploy()
+}
+
+// DeployWithValues deploys a single chart and allows you to specify some values
+func (k *Environment) DeployWithValues(chartName string, values map[string]interface{}) error {
+	chart, err := k.Charts.Get(chartName)
+	if err != nil {
+		return err
+	}
+	chart.Values = values
 	return chart.Deploy()
 }
 

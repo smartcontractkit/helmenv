@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soak-test-runner
+spec:
+  selector:
+    matchLabels:
+      app: soak-test-runner
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: soak-test-runner
+        release: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: configmap-volume
+          configMap:
+            name: soak-test-runner-cm
+      containers:
+        - name: soak-test-runner
+          image: {{ .Values.soak_test_runner.image.image }}:{{ .Values.soak_test_runner.image.version }}
+          command: ["/app/soak.test", "--ginkgo.focus", "{{ .Values.soak_test_runner.test_name }}"]
+          volumeMounts:
+            - name : configmap-volume
+              mountPath: /app/soak_env.yaml
+              subPath: soak_env.yaml
+          env:
+            - name: ENVIRONMENT_FILE
+              value: /app/soak_env.yaml
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+
