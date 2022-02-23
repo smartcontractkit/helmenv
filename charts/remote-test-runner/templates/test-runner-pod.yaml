@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: remote-test-runner
+spec:
+  restartPolicy: Never
+  volumes:
+    - name: configmap-volume
+      configMap:
+        name: remote-test-runner-cm
+  containers:
+    - name: remote-test-runner
+      image: golang:alpine
+      imagePullPolicy: Always
+      command: ["sh", "/root/init.sh"]
+      volumeMounts:
+        - name : configmap-volume
+          mountPath: /root/test-env.json
+          subPath: test-env.json
+        - name : configmap-volume
+          mountPath: /root/init.sh
+          subPath: init.sh
+      env:
+        - name: ENVIRONMENT_FILE
+          value: /root/test-env.json
+        - name: EMAIL_SERVER
+          value: {{ .Values.remote_test_runner.email_server }}
+        - name: EMAIL_ADDRESS
+          value: {{ .Values.remote_test_runner.email_address }}
+        - name: EMAIL_PASSWORD
+          value: {{ .Values.remote_test_runner.email_password }}
+      resources:
+        requests:
+          memory: {{ .Values.resources.requests.memory }}
+          cpu: {{ .Values.resources.requests.cpu }}
+        limits:
+          memory: {{ .Values.resources.limits.memory }}
+          cpu: {{ .Values.resources.limits.cpu }}

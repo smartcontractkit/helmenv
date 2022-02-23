@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: remote-test-runner-cm
+    release: {{ .Release.Name }}
+  name: remote-test-runner-cm
+data:
+  test-env.json: |
+    {{ .Values.remote_test_runner.config_file_contents }}
+  init.sh: |
+    #!/bin/bash
+    apk update
+    apk add --no-cache git
+    echo "Installed Git"
+
+    git version
+    echo "Cloning {{ .Values.remote_test_runner.clone_repo }} on branch {{ .Values.remote_test_runner.clone_repo_branch }}"
+    git clone --depth 1 -b {{ .Values.remote_test_runner.clone_repo_branch }} {{ .Values.remote_test_runner.clone_repo }} test-folder
+    echo "Cloned {{ .Values.remote_test_runner.clone_repo }} on branch {{ .Values.remote_test_runner.clone_repo_branch }}"
+    
+    cd test-folder
+    echo "Folder Contents"
+    ls
+    echo "Downloading go dependencies"
+    go mod download
+    echo "Downloaded go dependencies"
+
+    echo "Building tests in {{ .Values.remote_test_runner.test_suite_directory }}"
+    CGO_ENABLED=0 go test -c {{ .Values.remote_test_runner.test_suite_directory }} -o remote.test
+    chmod +x ./remote.test
+    echo "Built tests into './remote.test', running now"
+    ./remote.test --ginkgo.timeout=0 --ginkgo.focus {{ .Values.remote_test_runner.test_name }}

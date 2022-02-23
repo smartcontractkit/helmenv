@@ -16,18 +16,55 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
+// MarshalSafeDuration enables proper json marshalling and unmarshaling for config values
+// See: https://stackoverflow.com/questions/48050945/how-to-unmarshal-json-into-durations
+type MarshalSafeDuration time.Duration
+
+// AsTimeDuration returns as a standard time.Duration
+func (d MarshalSafeDuration) AsTimeDuration() time.Duration {
+	return time.Duration(d)
+}
+
+// MarshalJSON marshals durations into proper json
+func (d MarshalSafeDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(d).String())
+}
+
+// UnmarshalJSON unmarshals durations into proper json
+func (d *MarshalSafeDuration) UnmarshalJSON(b []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case float64:
+		*d = MarshalSafeDuration(time.Duration(value))
+		return nil
+	case string:
+		tmp, err := time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		*d = MarshalSafeDuration(tmp)
+		return nil
+	default:
+		return errors.New("invalid duration")
+	}
+}
+
 // Config represents the full configuration of an environment, it can either be defined
 // programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
-	Path            string                           `yaml:"-" json:"-" envconfig:"config_path"`
-	QPS             float32                          `yaml:"qps" json:"qps" envconfig:"qps" default:"50"`
-	Burst           int                              `yaml:"burst" json:"burst" envconfig:"burst" default:"50"`
-	Timeout         time.Duration                    `yaml:"timeout" json:"timeout" envconfig:"timeout" default:"3m"`
-	Persistent      bool                             `yaml:"persistent" json:"persistent" envconfig:"persistent"`
-	NamespacePrefix string                           `yaml:"namespace_prefix,omitempty" json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
-	Namespace       string                           `yaml:"namespace,omitempty" json:"namespace,omitempty" envconfig:"namespace"`
-	Charts          Charts                           `yaml:"charts,omitempty" json:"charts,omitempty" envconfig:"charts"`
-	Experiments     map[string]*chaos.ExperimentInfo `yaml:"experiments,omitempty" json:"experiments,omitempty" envconfig:"experiments"`
+	Path               string                           `yaml:"-" json:"-" envconfig:"config_path"`
+	QPS                float32                          `yaml:"qps" json:"qps" envconfig:"qps" default:"50"`
+	Burst              int                              `yaml:"burst" json:"burst" envconfig:"burst" default:"50"`
+	MarshalSafeTimeout MarshalSafeDuration              `yaml:"timeout" json:"timeout" ignored:"true" default:"3m"`
+	Timeout            time.Duration                    `yaml:"-" json:"-" envconfig:"timeout" default:"3m"`
+	Persistent         bool                             `yaml:"persistent" json:"persistent" envconfig:"persistent"`
+	NamespacePrefix    string                           `yaml:"namespace_prefix,omitempty" json:"namespace_prefix,omitempty" envconfig:"namespace_prefix"`
+	Namespace          string                           `yaml:"namespace,omitempty" json:"namespace,omitempty" envconfig:"namespace"`
+	Charts             Charts                           `yaml:"charts,omitempty" json:"charts,omitempty" envconfig:"charts"`
+	Experiments        map[string]*chaos.ExperimentInfo `yaml:"experiments,omitempty" json:"experiments,omitempty" envconfig:"experiments"`
 }
 
 // Charts represents a map of charts with some helper methods
@@ -122,7 +159,7 @@ func (c Charts) OrderedKeys() [][]string {
 	return keys
 }
 
-// DumpConfig dumps config to a file
+// DumpConfig dumps config to a yaml file
 func DumpConfig(cfg *Config, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -135,6 +172,24 @@ func DumpConfig(cfg *Config, path string) error {
 	if _, err := f.Write(d); err != nil {
 		return err
 	}
+	log.Info().Str("Path", path).Str("Format", "yaml").Msg("Config file written")
+	return nil
+}
+
+// DumpConfigJson dumps config to a json file
+func DumpConfigJson(cfg *Config, path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	d, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(d); err != nil {
+		return err
+	}
+	log.Info().Str("Path", path).Str("Format", "json").Msg("Config file written")
 	return nil
 }
 
@@ -150,16 +205,34 @@ func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environmen
 }
 
 // DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
-func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, filePath string) (*Environment, error) {
-	contents, err := os.ReadFile(filePath)
+func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, configFilePath string) (*Environment, error) {
+	contents, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
 	}
 	config := &Config{}
-	if err := yaml.Unmarshal(contents, &config); err != nil {
+	configFileExt := filepath.Ext(configFilePath)
+	log.Info().Str("Config File", configFilePath).Str("Extension", configFileExt).Msg("Reading from config file")
+	switch configFileExt {
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(contents, &config); err != nil {
+			return nil, err
+		}
+	case ".json":
+		if err := json.Unmarshal(contents, &config); err != nil {
+			return nil, err
+		}
+	default:
+		err = fmt.Errorf("Invalid file extension '%s' for config file, must be yaml or json", configFileExt)
+		log.Error().Str("Config File Path", configFilePath).
+			Str("Extension", configFileExt).
+			Err(err).
+			Msg("Error reading Config File")
 		return nil, err
 	}
-	config.Path = filePath
+
+	config.Path = configFilePath
+	config.Timeout = config.MarshalSafeTimeout.AsTimeDuration()
 	// Always set to true when loading from file as the environment state would be lost on deployment since if false
 	// config isn't written to disk
 	config.Persistent = true
