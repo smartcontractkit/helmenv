@@ -23,12 +23,8 @@ spec:
       env:
         - name: ENVIRONMENT_FILE
           value: /root/test-env.json
-        - name: EMAIL_SERVER
-          value: {{ .Values.remote_test_runner.email_server }}
-        - name: EMAIL_ADDRESS
-          value: {{ .Values.remote_test_runner.email_address }}
-        - name: EMAIL_PASSWORD
-          value: {{ .Values.remote_test_runner.email_password }}
+        - name: SLACK_WEBHOOK
+          value: {{ .Values.remote_test_runner.slack_webhook }}
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}

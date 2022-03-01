@@ -109,9 +109,7 @@ func DeployLongTestEnvironment(
 	testRepoBranch,
 	testSuiteDirectory,
 	testName,
-	emailServer,
-	emailAddress,
-	emailPassword,
+	slackWebhook,
 	chartDirectory string,
 ) (*Environment, error) {
 	env, err := DeployEnvironment(config, chartDirectory)
@@ -145,9 +143,7 @@ func DeployLongTestEnvironment(
 				"test_suite_directory": testSuiteDirectory,
 				"test_name":            testName,
 				"config_file_contents": testConfigString,
-				"email_server":         emailServer,
-				"email_address":        emailAddress,
-				"email_password":       emailPassword,
+				"slack_webhook":        slackWebhook,
 			},
 		},
 		Index: 99,

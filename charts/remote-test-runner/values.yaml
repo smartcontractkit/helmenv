@@ -4,10 +4,7 @@ remote_test_runner:
   test_suite_directory: ./suite/soak/tests/
   test_name: ocr
   config_file_contents: should be auto generated
-  email_server: smtp.gmail.com
-  email_address: example@gmail.com
-  email_password: notRealPassword
-
+  slack_webhook: https://hooks.slack.com/services/
 
 resources:
   requests:
