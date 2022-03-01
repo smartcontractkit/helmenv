@@ -41,9 +41,13 @@ func NewChainlinkReorgConfig(chainlinkValues map[string]interface{}) *Config {
 }
 
 // NewChainlinkConfig returns a vanilla Chainlink environment used for generic functional testing
-func NewChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
+func NewChainlinkConfig(chainlinkValues map[string]interface{}, optionalNamespacePrefix string) *Config {
+	nameSpacePrefix := "chainlink"
+	if optionalNamespacePrefix != "" {
+		nameSpacePrefix = optionalNamespacePrefix
+	}
 	return &Config{
-		NamespacePrefix: "chainlink",
+		NamespacePrefix: nameSpacePrefix,
 		Charts: Charts{
 			"geth":              {Index: 1},
 			"mockserver-config": {Index: 2},

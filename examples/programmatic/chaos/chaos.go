@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/chaos/experiments"
 	"github.com/smartcontractkit/helmenv/environment"
 	"github.com/smartcontractkit/helmenv/tools"
-	"os"
-	"time"
 )
 
 func init() {
@@ -16,7 +17,7 @@ func init() {
 
 func main() {
 	e, err := environment.DeployOrLoadEnvironment(
-		environment.NewChainlinkConfig(nil),
+		environment.NewChainlinkConfig(nil, ""),
 		tools.ChartsRoot,
 	)
 	if err != nil {
