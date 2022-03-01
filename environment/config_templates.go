@@ -53,19 +53,6 @@ func NewChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
 	}
 }
 
-// NewLongRunningChainlinkConfig returns a vanilla Chainlink environment for use in long running tests
-func NewLongRunningChainlinkConfig(chainlinkValues map[string]interface{}) *Config {
-	return &Config{
-		NamespacePrefix: "chainlink-long",
-		Charts: Charts{
-			"geth":              {Index: 1},
-			"mockserver-config": {Index: 2},
-			"mockserver":        {Index: 3},
-			"chainlink":         NewChainlinkChart(4, chainlinkValues),
-		},
-	}
-}
-
 // ChainlinkVersion sets the version of the chainlink image to use
 func ChainlinkVersion(version string, values map[string]interface{}) map[string]interface{} {
 	if values == nil {
