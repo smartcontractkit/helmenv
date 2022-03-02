@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
@@ -98,6 +99,68 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 		return nil, err
 	}
 	return e, e.SyncConfig()
+}
+
+// DeployLongTestEnvironment is used for deploying environment that expect to be running a test for a long time
+// (more than 30 minutes).
+func DeployLongTestEnvironment(
+	config *Config,
+	testRepo,
+	testRepoBranch,
+	testSuiteDirectory,
+	testName,
+	slackWebhook,
+	chartDirectory string,
+) (*Environment, error) {
+	env, err := DeployEnvironment(config, chartDirectory)
+	if err != nil {
+		return nil, err
+	}
+	env.Config.Persistent = true
+	err = env.SyncConfigJson()
+	if err != nil {
+		return env, err
+	}
+	log.Info().Str("Test Name", testName).
+		Str("Namespace", env.Namespace).
+		Str("Reading from test Config File", env.Path).
+		Msg("Deploying test runner to run long-running test")
+	// Create a config map with an env variable folder to send with the helm chart
+	// Then have test read from there
+	testConfigBytes, err := os.ReadFile(env.Path)
+	if err != nil {
+		return env, err
+	}
+	testConfigString := string(testConfigBytes)
+
+	err = env.AddChart(&HelmChart{
+		ReleaseName: "remote-test-runner",
+		Path:        path.Join(chartDirectory, "remote-test-runner"),
+		Values: map[string]interface{}{
+			"remote_test_runner": map[string]interface{}{
+				"clone_repo":           testRepo,
+				"clone_repo_branch":    testRepoBranch,
+				"test_suite_directory": testSuiteDirectory,
+				"test_name":            testName,
+				"config_file_contents": testConfigString,
+				"slack_webhook":        slackWebhook,
+			},
+		},
+		Index: 99,
+	})
+	if err != nil {
+		return env, err
+	}
+	err = env.Deploy("remote-test-runner")
+	if err != nil {
+		log.Error().Err(err).Msg("Error while deploying the test runner to the environment")
+		if err := env.Teardown(); err != nil {
+			return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		}
+		return nil, err
+	}
+	err = env.SyncConfig()
+	return env, err
 }
 
 // LoadEnvironment loads an already deployed environment from config
@@ -240,10 +303,23 @@ func (k *Environment) ClearConfigLocalPorts() error {
 // SyncConfig dumps config in Persistent mode
 func (k *Environment) SyncConfig() error {
 	if k.Config.Persistent {
-		if len(k.Path) == 0 {
+		if len(k.Path) == 0 || strings.HasSuffix(k.Path, ".json") {
 			k.Path = fmt.Sprintf("%s.yaml", k.Namespace)
 		}
 		if err := DumpConfig(k.Config, k.Path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SyncConfigJson dumps a json config in Persistent mode
+func (k *Environment) SyncConfigJson() error {
+	if k.Config.Persistent {
+		if len(k.Path) == 0 || strings.HasSuffix(k.Path, ".yaml") {
+			k.Path = fmt.Sprintf("%s.json", k.Namespace)
+		}
+		if err := DumpConfigJson(k.Config, k.Path); err != nil {
 			return err
 		}
 	}

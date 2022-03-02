@@ -1,0 +1,15 @@
+remote_test_runner:
+  clone_repo: git://github.com/smartcontractkit/integrations-framework.git
+  clone_repo_branch: main
+  test_suite_directory: ./suite/soak/tests/
+  test_name: ocr
+  config_file_contents: should be auto generated
+  slack_webhook: https://hooks.slack.com/services/
+
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2048Mi
+  limits:
+    cpu: 1000m
+    memory: 2048Mi
