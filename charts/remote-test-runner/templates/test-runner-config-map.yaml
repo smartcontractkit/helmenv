@@ -27,7 +27,7 @@ data:
     echo "Downloaded go dependencies"
 
     echo "Building tests in {{ .Values.remote_test_runner.test_suite_directory }}"
-    CGO_ENABLED=0 go test -c {{ .Values.remote_test_runner.test_suite_directory }} -o remote.test
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -c {{ .Values.remote_test_runner.test_suite_directory }} -o remote.test
     chmod +x ./remote.test
     echo "Built tests into './remote.test', running now"
     ./remote.test --ginkgo.timeout=0 --ginkgo.focus {{ .Values.remote_test_runner.test_name }}
