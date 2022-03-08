@@ -55,6 +55,7 @@ func (a *Artifacts) writePodArtifacts(testDir string) error {
 		log.Err(err).
 			Str("Namespace", a.env.Config.NamespacePrefix).
 			Msg("Error retrieving pod list from K8s environment")
+		return err
 	}
 	for _, pod := range podsList.Items {
 		log.Info().
