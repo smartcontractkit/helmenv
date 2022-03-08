@@ -10,8 +10,7 @@ spec:
         name: remote-test-runner-cm
   containers:
     - name: remote-test-runner
-      image: golang:alpine
-      imagePullPolicy: Always
+      image: alpine
       command: ["sh", "/root/init.sh"]
       volumeMounts:
         - name : configmap-volume
@@ -25,6 +24,16 @@ spec:
           value: /root/test-env.json
         - name: SLACK_WEBHOOK
           value: {{ .Values.remote_test_runner.slack_webhook }}
+        - name: SLACK_API
+          value: {{ .Values.remote_test_runner.slack_api }}
+        - name: "GOOS"
+          value: "linux"
+        - name: "GOARCH"
+          value: "amd64"
+        - name: "FRAMEWORK_CONFIG_FILE"
+          value: /root/framework.yaml
+        - name: "NETWORKS_CONFIG_FILE"
+          value: /root/networks.yaml
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}

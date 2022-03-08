@@ -105,12 +105,13 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 // (more than 30 minutes).
 func DeployLongTestEnvironment(
 	config *Config,
-	testRepo,
-	testRepoBranch,
-	testSuiteDirectory,
+	chartDirectory,
 	testName,
 	slackWebhook,
-	chartDirectory string,
+	slackAPI,
+	frameworkConfigPath,
+	networksConfigPath,
+	testExecutablePath string,
 ) (*Environment, error) {
 	env, err := DeployEnvironment(config, chartDirectory)
 	if err != nil {
@@ -138,12 +139,10 @@ func DeployLongTestEnvironment(
 		Path:        path.Join(chartDirectory, "remote-test-runner"),
 		Values: map[string]interface{}{
 			"remote_test_runner": map[string]interface{}{
-				"clone_repo":           testRepo,
-				"clone_repo_branch":    testRepoBranch,
-				"test_suite_directory": testSuiteDirectory,
 				"test_name":            testName,
 				"config_file_contents": testConfigString,
 				"slack_webhook":        slackWebhook,
+				"slack_api":            slackAPI,
 			},
 		},
 		Index: 99,
@@ -159,7 +158,27 @@ func DeployLongTestEnvironment(
 		}
 		return nil, err
 	}
-	err = env.SyncConfig()
+	if err = env.SyncConfig(); err != nil {
+		return nil, err
+	}
+	remoteChart, err := env.Charts.Get("remote-test-runner")
+	if err != nil {
+		return nil, err
+	}
+	// Copy config and executable files to pod
+	_, _, errOut, err := remoteChart.CopyToPod(frameworkConfigPath, "/root/framework.yaml", "remote-test-runner")
+	if err != nil {
+		return nil, errors.Wrap(err, errOut.String())
+	}
+	_, _, errOut, err = remoteChart.CopyToPod(networksConfigPath, "/root/networks.yaml", "remote-test-runner")
+	if err != nil {
+		return nil, errors.Wrap(err, errOut.String())
+	}
+	_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, "/root/remote.test", "remote-test-runner")
+	if err != nil {
+		return nil, errors.Wrap(err, errOut.String())
+	}
+
 	return env, err
 }
 

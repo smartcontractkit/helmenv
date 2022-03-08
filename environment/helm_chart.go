@@ -163,7 +163,16 @@ func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*b
 	copyOptions.Clientset = hc.env.k8sClient
 	copyOptions.ClientConfig = hc.env.k8sConfig
 	copyOptions.Container = containername
-	err := copyOptions.Run([]string{src, dst})
+	copyOptions.Namespace = hc.env.Namespace
+	destString := fmt.Sprintf("%s/%s:%s", hc.env.Namespace, hc.ReleaseName, dst)
+	log.Debug().
+		Str("Namespace", hc.env.Namespace).
+		Str("Chart", hc.ReleaseName).
+		Str("Source", src).
+		Str("Destination", destString).
+		Str("Container", containername).
+		Msg("Uploading file to pod")
+	err := copyOptions.Run([]string{src, destString})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
 	}
