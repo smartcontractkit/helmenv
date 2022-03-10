@@ -95,34 +95,34 @@ func (hc *HelmChart) Connect() error {
 func (hc *HelmChart) Deploy() error {
 	if len(hc.URL) > 0 {
 		if err := hc.downloadChart(); err != nil {
-			return err
+			return errors.Wrap(err, "downloadChart")
 		}
 	}
 	if hc.BeforeHook != nil {
 		if err := hc.BeforeHook(hc.env); err != nil {
-			return err
+			return errors.Wrap(err, "BeforeHook")
 		}
 	}
 	if err := hc.deployChart(); err != nil {
-		return err
+		return errors.Wrap(err, "deployChart")
 	}
 	if err := hc.enumerateApps(); err != nil {
-		return err
+		return errors.Wrap(err, "enumerateApps")
 	}
 	if err := hc.fetchPods(); err != nil {
-		return err
+		return errors.Wrap(err, "fetchPods")
 	}
 	if err := hc.updateChartSettings(); err != nil {
-		return err
+		return errors.Wrap(err, "updateChartSettings")
 	}
 	if hc.AutoConnect {
 		if err := hc.Connect(); err != nil {
-			return err
+			return errors.Wrap(err, "Connect")
 		}
 	}
 	if hc.AfterHook != nil {
 		if err := hc.AfterHook(hc.env); err != nil {
-			return err
+			return errors.Wrap(err, "AfterHook")
 		}
 	}
 	return nil
