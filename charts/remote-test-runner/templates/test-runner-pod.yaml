@@ -38,6 +38,10 @@ spec:
           value: /root/framework.yaml
         - name: "NETWORKS_CONFIG_FILE"
           value: /root/networks.yaml
+        - name: "TEST_FILE"
+          value: "/root/remote.test"
+        - name: "TEST_FILE_SIZE"
+          value: {{ .Values.remote_test_runner.test_file_size }}
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}

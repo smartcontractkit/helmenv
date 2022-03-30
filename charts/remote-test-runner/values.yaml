@@ -5,6 +5,7 @@ remote_test_runner:
   slack_api: default
   slack_channel: default
   slack_user_id: default
+  remote_test_size: 0
 
 resources:
   requests:
