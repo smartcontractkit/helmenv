@@ -16,6 +16,7 @@ data:
     do
       if [ -f "$TEST_FILE" ]
       then
+        file $TEST_FILE
         echo "$TEST_FILE found!"
         if [ -z "$(lsof | grep "$TEST_FILE")" ]
         then
