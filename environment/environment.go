@@ -107,7 +107,6 @@ func DeployLongTestEnvironment(
 	config *Config,
 	chartDirectory,
 	testName,
-	slackWebhook,
 	slackAPI,
 	slackChannel,
 	slackUser,
@@ -143,7 +142,6 @@ func DeployLongTestEnvironment(
 			"remote_test_runner": map[string]interface{}{
 				"test_name":            testName,
 				"config_file_contents": testConfigString,
-				"slack_webhook":        slackWebhook,
 				"slack_api":            slackAPI,
 				"slack_channel":        slackChannel,
 				"slack_user_id":        slackUser,

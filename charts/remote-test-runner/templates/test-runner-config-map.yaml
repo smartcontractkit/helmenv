@@ -12,7 +12,7 @@ data:
     #!/bin/sh
     TEST_FILE=/root/remote.test
 
-    for i in 1 2 3 4 5 6 7 8 9 10
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
     do
       if [ -f "$TEST_FILE" ]
       then
@@ -20,16 +20,14 @@ data:
         if [ -z "$(lsof | grep "$TEST_FILE")" ]
         then
           chmod +x /root/remote.test
-          /root/remote.test --ginkgo.v --ginkgo.focus {{ .Values.remote_test_runner.test_name }}
+          /root/remote.test --ginkgo.timeout=0 --ginkgo.v --ginkgo.focus {{ .Values.remote_test_runner.test_name }}
           break
         else
           lsof | grep "$TEST_FILE"
           echo "$TEST_FILE is still being copied, waiting for copy process to finish"
         fi
         echo "Waiting for copy process to finalize"
-        
       fi
-      ls /root
       
       sleep 10
     done

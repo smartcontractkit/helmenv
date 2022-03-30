@@ -1,15 +1,14 @@
 remote_test_runner:
   test_name: "@soak-ocr"
   config_file_contents: should be auto generated
-  slack_webhook: https://hooks.slack.com/services/
   slack_api: default
   slack_channel: default
   slack_user_id: default
 
 resources:
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 1
+    memory: 1024Mi
   limits:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 1
+    memory: 1024Mi
