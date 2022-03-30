@@ -2,7 +2,7 @@ replicas: 1
 
 sol:
   image:
-    image: f4hrenh9it/sol-val
+    image: tateexon/solana-validator:1.9.14
     version: v1
 
 resources:
