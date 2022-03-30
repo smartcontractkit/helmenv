@@ -159,6 +159,7 @@ func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*b
 	hc.env.k8sConfig.GroupVersion = &schema.GroupVersion{Version: "v1"} // this targets the core api groups so the url path will be /api/v1
 	hc.env.k8sConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 	ioStreams, in, out, errOut := genericclioptions.NewTestIOStreams()
+
 	copyOptions := cp.NewCopyOptions(ioStreams)
 	copyOptions.Clientset = hc.env.k8sClient
 	copyOptions.ClientConfig = hc.env.k8sConfig
