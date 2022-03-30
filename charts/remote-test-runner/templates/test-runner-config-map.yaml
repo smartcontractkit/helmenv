@@ -16,7 +16,7 @@ data:
       if [ -f "$TEST_FILE" ]
       then
         echo "$TEST_FILE found!"
-        CURRENT_FILE_SIZE=FILESIZE=$(stat -c%s "$TEST_FILE")
+        CURRENT_FILE_SIZE=$(stat -c%s "$TEST_FILE")
         echo "File is currently $CURRENT_FILE_SIZE bytes, waiting for it to be $TEST_FILE_SIZE bytes"
         if [ "$CURRENT_FILE_SIZE" -eq "$TEST_FILE_SIZE" ]
         then
