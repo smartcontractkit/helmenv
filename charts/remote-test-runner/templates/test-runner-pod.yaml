@@ -41,7 +41,7 @@ spec:
         - name: "TEST_FILE"
           value: "/root/remote.test"
         - name: "TEST_FILE_SIZE"
-          value: {{ .Values.remote_test_runner.test_file_size }}
+          value: "{{ .Values.remote_test_runner.test_file_size }}"
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}
