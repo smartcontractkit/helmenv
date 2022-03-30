@@ -135,6 +135,10 @@ func DeployLongTestEnvironment(
 		return env, err
 	}
 	testConfigString := string(testConfigBytes)
+	exeFile, err := os.Stat(testExecutablePath)
+	if err != nil {
+		return env, err
+	}
 
 	err = env.AddChart(&HelmChart{
 		ReleaseName: "remote-test-runner",
@@ -147,6 +151,7 @@ func DeployLongTestEnvironment(
 				"slack_api":            slackAPI,
 				"slack_channel":        slackChannel,
 				"slack_user_id":        slackUser,
+				"test_file_size":       exeFile.Size(),
 			},
 		},
 		Index: 99,

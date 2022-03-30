@@ -159,20 +159,23 @@ func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*b
 	hc.env.k8sConfig.GroupVersion = &schema.GroupVersion{Version: "v1"} // this targets the core api groups so the url path will be /api/v1
 	hc.env.k8sConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 	ioStreams, in, out, errOut := genericclioptions.NewTestIOStreams()
+
 	copyOptions := cp.NewCopyOptions(ioStreams)
 	copyOptions.Clientset = hc.env.k8sClient
 	copyOptions.ClientConfig = hc.env.k8sConfig
 	copyOptions.Container = containername
+	copyOptions.Namespace = hc.env.Namespace
+	destString := fmt.Sprintf("%s/%s:%s", hc.env.Namespace, hc.ReleaseName, dst)
 
 	log.Debug().
 		Str("Namespace", hc.env.Namespace).
 		Str("Chart", hc.ReleaseName).
 		Str("Source", src).
-		Str("Destination", dst).
+		Str("Destination", destString).
 		Str("Container", containername).
 		Msg("Uploading file to pod")
 
-	err := copyOptions.Run([]string{src, dst})
+	err := copyOptions.Run([]string{src, destString})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
 	}
