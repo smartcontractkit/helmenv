@@ -107,7 +107,6 @@ func DeployLongTestEnvironment(
 	config *Config,
 	chartDirectory,
 	testName,
-	slackWebhook,
 	slackAPI,
 	slackChannel,
 	slackUser,
@@ -147,7 +146,6 @@ func DeployLongTestEnvironment(
 			"remote_test_runner": map[string]interface{}{
 				"test_name":            testName,
 				"config_file_contents": testConfigString,
-				"slack_webhook":        slackWebhook,
 				"slack_api":            slackAPI,
 				"slack_channel":        slackChannel,
 				"slack_user_id":        slackUser,
@@ -183,7 +181,8 @@ func DeployLongTestEnvironment(
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
-	_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, "/root/remote.test", "remote-test-runner")
+	destPath := fmt.Sprintf("%s/%s:/root/remote.test", remoteChart.namespaceName, remoteChart.ReleaseName)
+	_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, destPath, "remote-test-runner")
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
