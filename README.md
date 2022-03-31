@@ -1,5 +1,10 @@
 # Helm environment
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/smartcontractkit/helmenv)](https://goreportcard.com/report/github.com/smartcontractkit/helmenv)
+[![Go Reference](https://pkg.go.dev/badge/github.com/smartcontractkit/helmenv.svg)](https://pkg.go.dev/github.com/smartcontractkit/helmenv)
+![Lint](https://github.com/smartcontractkit/helmenv/actions/workflows/lint.yaml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Thin wrapper for Helm to help you interact with `k8s` environments
 
 ## Goals
