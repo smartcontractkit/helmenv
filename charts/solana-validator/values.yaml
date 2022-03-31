@@ -2,8 +2,8 @@ replicas: 1
 
 sol:
   image:
-    image: tateexon/solana-validator
-    version: 1.9.14
+    image: solanalabs/solana
+    version: v1.9.14
 
 resources:
   requests:
