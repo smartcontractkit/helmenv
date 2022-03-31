@@ -154,7 +154,8 @@ func (hc *HelmChart) Upgrade() error {
 	return hc.updateChartSettings()
 }
 
-// CopyToPod copies src to a particular container
+// CopyToPod copies src to a particular container. Destination should be in the form of a proper K8s destination path
+// NAMESPACE/POD_NAME:folder/FILE_NAME
 func (hc *HelmChart) CopyToPod(src, destination, containername string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 	hc.env.k8sConfig.APIPath = "/api"
 	hc.env.k8sConfig.GroupVersion = &schema.GroupVersion{Version: "v1"} // this targets the core api groups so the url path will be /api/v1
@@ -167,12 +168,12 @@ func (hc *HelmChart) CopyToPod(src, destination, containername string) (*bytes.B
 	copyOptions.Container = containername
 	copyOptions.Namespace = hc.env.Namespace
 
-	alreadyFormatted, err := regexp.MatchString(".*?\\/.*?\\:.*", destination)
+	formatted, err := regexp.MatchString(".*?\\/.*?\\:.*", destination)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
 	}
-	if !alreadyFormatted {
-		destination = fmt.Sprintf("%s/%s:%s", hc.env.Namespace, hc.ReleaseName, destination)
+	if !formatted {
+		return nil, nil, nil, fmt.Errorf("Destination string improperly formatted, see reference 'NAMESPACE/POD_NAME:folder/FILE_NAME'")
 	}
 
 	log.Debug().
