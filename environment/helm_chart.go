@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -154,7 +155,7 @@ func (hc *HelmChart) Upgrade() error {
 }
 
 // CopyToPod copies src to a particular container
-func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
+func (hc *HelmChart) CopyToPod(src, destination, containername string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 	hc.env.k8sConfig.APIPath = "/api"
 	hc.env.k8sConfig.GroupVersion = &schema.GroupVersion{Version: "v1"} // this targets the core api groups so the url path will be /api/v1
 	hc.env.k8sConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
@@ -165,17 +166,24 @@ func (hc *HelmChart) CopyToPod(src string, dst string, containername string) (*b
 	copyOptions.ClientConfig = hc.env.k8sConfig
 	copyOptions.Container = containername
 	copyOptions.Namespace = hc.env.Namespace
-	destString := fmt.Sprintf("%s/%s:%s", hc.env.Namespace, hc.ReleaseName, dst)
+
+	alreadyFormatted, err := regexp.MatchString(".*?\\/.*?\\:.*", destination)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
+	}
+	if !alreadyFormatted {
+		destination = fmt.Sprintf("%s/%s:%s", hc.env.Namespace, hc.ReleaseName, destination)
+	}
 
 	log.Debug().
 		Str("Namespace", hc.env.Namespace).
 		Str("Chart", hc.ReleaseName).
 		Str("Source", src).
-		Str("Destination", destString).
+		Str("Destination", destination).
 		Str("Container", containername).
 		Msg("Uploading file to pod")
 
-	err := copyOptions.Run([]string{src, destString})
+	err = copyOptions.Run([]string{src, destination})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("Could not run copy operation: %v", err)
 	}
