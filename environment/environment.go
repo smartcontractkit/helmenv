@@ -173,15 +173,17 @@ func DeployLongTestEnvironment(
 		return nil, err
 	}
 	// Copy config and executable files to pod
-	_, _, errOut, err := remoteChart.CopyToPod(frameworkConfigPath, "/root/framework.yaml", "remote-test-runner")
+	destPath := fmt.Sprintf("%s/%s:/root/framework.yaml", remoteChart.namespaceName, remoteChart.ReleaseName)
+	_, _, errOut, err := remoteChart.CopyToPod(frameworkConfigPath, destPath, "remote-test-runner")
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
-	_, _, errOut, err = remoteChart.CopyToPod(networksConfigPath, "/root/networks.yaml", "remote-test-runner")
+	destPath = fmt.Sprintf("%s/%s:/root/networks.yaml", remoteChart.namespaceName, remoteChart.ReleaseName)
+	_, _, errOut, err = remoteChart.CopyToPod(networksConfigPath, destPath, "remote-test-runner")
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
-	destPath := fmt.Sprintf("%s/%s:/root/remote.test", remoteChart.namespaceName, remoteChart.ReleaseName)
+	destPath = fmt.Sprintf("%s/%s:/root/remote.test", remoteChart.namespaceName, remoteChart.ReleaseName)
 	_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, destPath, "remote-test-runner")
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
