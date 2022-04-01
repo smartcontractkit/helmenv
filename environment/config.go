@@ -117,7 +117,7 @@ func (c Charts) ExecuteInPod(chartName string, podNameSubstring string, podIndex
 	return nil
 }
 
-// Decode is used by envconfig to initialise the custom Charts type with populated values
+// Decode is used by envconfig to initialize the custom Charts type with populated values
 // This function will take a JSON object representing charts, and unmarshal it into the existing object to "merge" the
 // two
 func (c Charts) Decode(value string) error {
