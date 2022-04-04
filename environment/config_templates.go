@@ -1,7 +1,7 @@
 package environment
 
 import (
-	"fmt"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 )
@@ -46,11 +46,18 @@ func NewChainlinkReorgConfig(chainlinkValues map[string]interface{}) *Config {
 	}
 }
 
-// NewChainlinkConfig returns a vanilla Chainlink environment used for generic functional testing
+// Organizes passed in values for simulated network charts
+type networkChart struct {
+	Replicas int
+	Values   map[string]interface{}
+}
+
+// NewChainlinkConfig returns a vanilla Chainlink environment used for generic functional testing. Geth networks can
+// be passed in to launch differently configured simulated geth instances.
 func NewChainlinkConfig(
 	chainlinkValues map[string]interface{},
-	networks []string,
 	optionalNamespacePrefix string,
+	networks ...func() (string, map[string]interface{}),
 ) *Config {
 	nameSpacePrefix := "chainlink"
 	if optionalNamespacePrefix != "" {
@@ -61,30 +68,47 @@ func NewChainlinkConfig(
 		"mockserver":        {Index: 3},
 		"chainlink":         NewChainlinkChart(4, chainlinkValues),
 	}
-	// TODO: This will break or have weird behavior with multiple geth networks selected.
-	// helmenv needs to be able to distinguish different geth instances
-	if len(networks) > 1 {
-		log.Warn().
-			Str("Networks", fmt.Sprintf("%v", networks)).
-			Msg("If attempting to launch multiple geth instances, helmenv has some odd behavior, and doesn't fully support this usage yet")
-	}
-	for _, network := range networks {
-		if network == "geth" {
-			charts["geth"] = &HelmChart{Index: 1}
-		} else if network == "geth_performance" {
-			charts["geth"] = &HelmChart{Index: 1, Values: performanceGeth()}
-		} else if network == "geth_realistic" {
-			charts["geth"] = &HelmChart{Index: 1, Values: realisticGeth()}
+
+	networkCharts := map[string]*networkChart{}
+	for _, networkFunc := range networks {
+		chartName, networkValues := networkFunc()
+		if networkValues == nil {
+			networkValues = map[string]interface{}{}
+		}
+		// TODO: If multiple networks with the same chart name are present, only use the values from the first one.
+		// This means that we can't have mixed network values with the same type
+		// (e.g. all geth deployments need to have the same values).
+		// Enabling different behavior is a bit of a niche case.
+		if _, present := networkCharts[chartName]; !present {
+			networkCharts[chartName] = &networkChart{Replicas: 1, Values: networkValues}
+		} else {
+			if !reflect.DeepEqual(networkValues, networkCharts[chartName].Values) {
+				log.Warn().Msg("If trying to launch multiple networks with different underlying values but the same type, " +
+					"(e.g. 1 geth performance and 1 geth realistic), that behavior is not currently fully supported. " +
+					"Only replicas of the first of that network type will be launched.")
+			}
+			networkCharts[chartName].Replicas++
 		}
 	}
+
+	for chartName, networkChart := range networkCharts {
+		networkChart.Values["replicas"] = networkChart.Replicas
+		charts[chartName] = &HelmChart{Index: 1, Values: networkChart.Values}
+	}
+
 	return &Config{
 		NamespacePrefix: nameSpacePrefix,
 		Charts:          charts,
 	}
 }
 
-// performanceGeth sets up the simulated geth instance with more power, bigger blocks, and faster mining
-func performanceGeth() map[string]interface{} {
+// DefaultGeth sets up a basic, low-power simulated geth instance. Really just returns empty map to use default values
+func DefaultGeth() (string, map[string]interface{}) {
+	return "geth", map[string]interface{}{}
+}
+
+// PerformanceGeth sets up the simulated geth instance with more power, bigger blocks, and faster mining
+func PerformanceGeth() (string, map[string]interface{}) {
 	values := map[string]interface{}{}
 	values["resources"] = map[string]interface{}{
 		"requests": map[string]interface{}{
@@ -103,11 +127,11 @@ func performanceGeth() map[string]interface{} {
 		"--miner.gastarget": "30000000000",
 		"--cache":           "4096",
 	}
-	return values
+	return "geth", values
 }
 
-// realisticGeth sets up the simulated geth instance to emulate the actual ethereum mainnet as close as possible
-func realisticGeth() map[string]interface{} {
+// RealisticGeth sets up the simulated geth instance to emulate the actual ethereum mainnet as close as possible
+func RealisticGeth() (string, map[string]interface{}) {
 	values := map[string]interface{}{}
 	values["resources"] = map[string]interface{}{
 		"requests": map[string]interface{}{
@@ -124,9 +148,10 @@ func realisticGeth() map[string]interface{} {
 		"--miner.threads":   "4",
 		"--miner.gasprice":  "10000000000",
 		"--miner.gastarget": "15000000000",
+		"--cache":           "4096",
 	}
 
-	return values
+	return "geth", values
 }
 
 // ChainlinkVersion sets the version of the chainlink image to use

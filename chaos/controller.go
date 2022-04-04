@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/smartcontractkit/helmenv/chaos/experiments"
-	"github.com/smartcontractkit/helmenv/tools"
 	"io/ioutil"
 	"path/filepath"
 	"text/template"
+
+	"github.com/smartcontractkit/helmenv/chaos/experiments"
+	"github.com/smartcontractkit/helmenv/tools"
 
 	"github.com/ghodss/yaml"
 	"github.com/rs/zerolog/log"
@@ -109,7 +110,7 @@ func (c *Controller) payloadFromTemplate(tmplPath string) (*CRDPayload, error) {
 	return &CRDPayload{Name: name, Resource: resource, Data: data}, nil
 }
 
-// CRDPayload Custom Resource Defenition call payload
+// CRDPayload Custom Resource Definition call payload
 type CRDPayload struct {
 	Name     string
 	Resource string

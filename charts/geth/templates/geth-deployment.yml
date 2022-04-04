@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: geth
 spec:
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: geth
