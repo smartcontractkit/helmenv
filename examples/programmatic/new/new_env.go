@@ -16,7 +16,7 @@ func init() {
 
 func main() {
 	e, err := environment.DeployOrLoadEnvironment(
-		environment.NewChainlinkConfig(nil, ""),
+		environment.NewChainlinkConfig(nil, []string{"geth"}, ""),
 		tools.ChartsRoot,
 	)
 	if err != nil {

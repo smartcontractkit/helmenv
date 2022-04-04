@@ -17,7 +17,7 @@ func init() {
 
 func main() {
 	e, err := environment.DeployOrLoadEnvironment(
-		environment.NewChainlinkConfig(nil, ""),
+		environment.NewChainlinkConfig(nil, []string{"geth_performance"}, ""),
 		tools.ChartsRoot,
 	)
 	if err != nil {

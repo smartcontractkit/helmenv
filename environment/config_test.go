@@ -53,7 +53,7 @@ func TestChartsFile(t *testing.T) {
 	err = chartsTestFile.Sync()
 	require.NoError(t, err)
 
-	chainlinkConfig := environment.NewChainlinkConfig(map[string]interface{}{}, "")
+	chainlinkConfig := environment.NewChainlinkConfig(map[string]interface{}{}, []string{"geth"}, "")
 	err = chainlinkConfig.Charts.Decode(chartsTestFilePath)
 	require.NoError(t, err)
 }

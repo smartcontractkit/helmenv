@@ -1,5 +1,11 @@
 package environment
 
+import (
+	"fmt"
+
+	"github.com/rs/zerolog/log"
+)
+
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
 func NewChainlinkChart(index int, values map[string]interface{}) *HelmChart {
 	return &HelmChart{Path: "chainlink", Values: values, Index: index}
@@ -41,20 +47,86 @@ func NewChainlinkReorgConfig(chainlinkValues map[string]interface{}) *Config {
 }
 
 // NewChainlinkConfig returns a vanilla Chainlink environment used for generic functional testing
-func NewChainlinkConfig(chainlinkValues map[string]interface{}, optionalNamespacePrefix string) *Config {
+func NewChainlinkConfig(
+	chainlinkValues map[string]interface{},
+	networks []string,
+	optionalNamespacePrefix string,
+) *Config {
 	nameSpacePrefix := "chainlink"
 	if optionalNamespacePrefix != "" {
 		nameSpacePrefix = optionalNamespacePrefix
 	}
+	charts := Charts{
+		"mockserver-config": {Index: 2},
+		"mockserver":        {Index: 3},
+		"chainlink":         NewChainlinkChart(4, chainlinkValues),
+	}
+	// TODO: This will break or have weird behavior with multiple geth networks selected.
+	// helmenv needs to be able to distinguish different geth instances
+	if len(networks) > 1 {
+		log.Warn().
+			Str("Networks", fmt.Sprintf("%v", networks)).
+			Msg("If attempting to launch multiple geth instances, helmenv has some odd behavior, and doesn't fully support this usage yet")
+	}
+	for _, network := range networks {
+		if network == "geth" {
+			charts["geth"] = &HelmChart{Index: 1}
+		} else if network == "geth_performance" {
+			charts["geth"] = &HelmChart{Index: 1, Values: performanceGeth()}
+		} else if network == "geth_realistic" {
+			charts["geth"] = &HelmChart{Index: 1, Values: realisticGeth()}
+		}
+	}
 	return &Config{
 		NamespacePrefix: nameSpacePrefix,
-		Charts: Charts{
-			"geth":              {Index: 1},
-			"mockserver-config": {Index: 2},
-			"mockserver":        {Index: 3},
-			"chainlink":         NewChainlinkChart(4, chainlinkValues),
+		Charts:          charts,
+	}
+}
+
+// performanceGeth sets up the simulated geth instance with more power, bigger blocks, and faster mining
+func performanceGeth() map[string]interface{} {
+	values := map[string]interface{}{}
+	values["resources"] = map[string]interface{}{
+		"requests": map[string]interface{}{
+			"cpu":    "4",
+			"memory": "4096Mi",
+		},
+		"limits": map[string]interface{}{
+			"cpu":    "4",
+			"memory": "4096Mi",
 		},
 	}
+	values["config_args"] = map[string]interface{}{
+		"--dev.period":      "1",
+		"--miner.threads":   "4",
+		"--miner.gasprice":  "10000000000",
+		"--miner.gastarget": "30000000000",
+		"--cache":           "4096",
+	}
+	return values
+}
+
+// realisticGeth sets up the simulated geth instance to emulate the actual ethereum mainnet as close as possible
+func realisticGeth() map[string]interface{} {
+	values := map[string]interface{}{}
+	values["resources"] = map[string]interface{}{
+		"requests": map[string]interface{}{
+			"cpu":    "4",
+			"memory": "4096Mi",
+		},
+		"limits": map[string]interface{}{
+			"cpu":    "4",
+			"memory": "4096Mi",
+		},
+	}
+	values["config_args"] = map[string]interface{}{
+		"--dev.period":      "7",
+		"--miner.threads":   "4",
+		"--miner.gasprice":  "10000000000",
+		"--miner.gastarget": "15000000000",
+	}
+
+	return values
 }
 
 // ChainlinkVersion sets the version of the chainlink image to use
