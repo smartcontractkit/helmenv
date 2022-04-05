@@ -9,8 +9,8 @@ remote_test_runner:
 
 resources:
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 1
+    memory: 1028Mi
   limits:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 1
+    memory: 1028Mi
