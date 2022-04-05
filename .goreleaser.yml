@@ -3,7 +3,7 @@ project_name: helmenv
 release:
   github:
     owner: smartcontractkit
-    name: envcli
+    name: helmenv
 
 builds:
   - binary: envcli
