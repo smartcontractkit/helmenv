@@ -1,0 +1,17 @@
+name: Golang-Version
+description: Gets the golang version from the .tool-versions file
+
+outputs:
+  go-version:
+    description: "The golang version from the .tool-versions file"
+    value: ${{ steps.get-go-version.outputs.go-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Go version
+      id: get-go-version
+      shell: bash
+      run: |
+        GO_VERSION=$(cat ./.tool-versions | grep golang | sed -En "s/golang (.*)/\1/p")
+        echo "::set-output name=go-version::${GO_VERSION}"
