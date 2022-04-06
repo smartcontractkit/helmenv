@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: geth
 spec:
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: geth
@@ -88,11 +89,19 @@ spec:
               mountPath: /root/.ethereum/devchain/keystore/key20
               subPath: key20
           args:
-          {{- range $arg := .Values.args }}
+          {{- range $arg := .Values.standard_args }}
             {{- if kindIs "string" $arg}}
             - {{ $arg | quote}}
               {{- else }}
             - {{ $arg }}
+            {{- end }}
+          {{- end }}
+          {{- range $arg, $val := .Values.config_args }}
+            - {{ $arg }}
+            {{- if kindIs "string" $val}}
+            - {{ $val | quote}}
+              {{- else }}
+            - {{ $val }}
             {{- end }}
           {{- end }}
           ports:

@@ -15,7 +15,7 @@ func init() {
 
 func main() {
 	e, err := environment.DeployOrLoadEnvironment(
-		environment.NewChainlinkConfig(nil, ""),
+		environment.NewChainlinkConfig(nil, "helmenv-dump-example", environment.DefaultGeth),
 		tools.ChartsRoot,
 	)
 	if err != nil {

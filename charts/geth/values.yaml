@@ -3,7 +3,7 @@ replicas: 1
 geth:
   image:
     image: ethereum/client-go
-    version: v1.10.15
+    version: v1.10.17
 
 resources:
   requests:
@@ -13,10 +13,8 @@ resources:
     cpu: 200m
     memory: 1000Mi
 
-args:
+standard_args:
   - --dev
-  - --dev.period
-  - "1"
   - --password
   - /root/config/password.txt
   - --datadir
@@ -61,14 +59,7 @@ args:
   - 0xdD2FD4581271e230360230F9337D5c0430Bf44C0
   - --unlock
   - 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199
-  - --networkid=1337
   - --mine
-  - --miner.threads
-  - "1"
-  - --miner.gasprice
-  - "10000000000"
-  - --miner.gastarget
-  - "80000000000"
   - --miner.etherbase
   - 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
   - --ipcdisable
@@ -90,3 +81,12 @@ args:
   - --http.corsdomain
   - "*"
   - --vmdebug
+  - --networkid=1337
+
+config_args:
+  "--dev.period": "1"
+  "--miner.threads": "1"
+  "--miner.gasprice": "10000000000"
+  "--miner.gastarget": "80000000000"
+  
+  
