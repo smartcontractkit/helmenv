@@ -57,7 +57,7 @@ type networkChart struct {
 func NewChainlinkConfig(
 	chainlinkValues map[string]interface{},
 	optionalNamespacePrefix string,
-	networks ...func() (string, map[string]interface{}),
+	networks ...SimulatedNetwork,
 ) *Config {
 	nameSpacePrefix := "chainlink"
 	if optionalNamespacePrefix != "" {
@@ -102,6 +102,10 @@ func NewChainlinkConfig(
 	}
 }
 
+// SimulatedNetwork is a function that enables launching a simulated network with a returned chart name
+// and corresponding values
+type SimulatedNetwork func() (string, map[string]interface{})
+
 // DefaultGeth sets up a basic, low-power simulated geth instance. Really just returns empty map to use default values
 func DefaultGeth() (string, map[string]interface{}) {
 	return "geth", map[string]interface{}{}
@@ -144,7 +148,7 @@ func RealisticGeth() (string, map[string]interface{}) {
 		},
 	}
 	values["config_args"] = map[string]interface{}{
-		"--dev.period":      "7",
+		"--dev.period":      "14",
 		"--miner.threads":   "4",
 		"--miner.gasprice":  "10000000000",
 		"--miner.gastarget": "15000000000",
