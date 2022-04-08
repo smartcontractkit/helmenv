@@ -8,10 +8,10 @@ geth:
 resources:
   requests:
     cpu: 200m
-    memory: 1000Mi
+    memory: 528Mi
   limits:
     cpu: 200m
-    memory: 1000Mi
+    memory: 528Mi
 
 standard_args:
   - --dev
@@ -82,6 +82,8 @@ standard_args:
   - "*"
   - --vmdebug
   - --networkid=1337
+  - --rpc.txfeecap
+  - "0"
 
 config_args:
   "--dev.period": "1"

@@ -26,6 +26,13 @@ data:
       sleep 1
     done
 
-    echo "Copied $TEST_FILE Successfully! Running test..."
     chmod +x $TEST_FILE
+    echo "File details"
+    stat $TEST_FILE
+    echo "-----------"
+    file $TEST_FILE
+    echo "-----------"
+    ldd $TEST_FILE
+
+    echo "Copied $TEST_FILE Successfully! Running test..."
     $TEST_FILE --ginkgo.timeout=0 --ginkgo.v --ginkgo.focus {{ .Values.remote_test_runner.test_name }}

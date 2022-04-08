@@ -47,7 +47,7 @@ env:
   p2p_listen_port: "6690"
   root: ./clroot
   secure_cookies: "false"
-  eth_max_in_flight_transactions: "5000"
+  eth_max_in_flight_transactions: "16"
   keeper_default_transaction_queue_depth: "1"
   keeper_registry_sync_interval: "5s"
   keeper_minimum_required_confirmations: "1"

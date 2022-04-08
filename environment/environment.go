@@ -33,7 +33,7 @@ import (
 
 const (
 	// HelmInstallTimeout timeout for installing a helm chart
-	HelmInstallTimeout = 200 * time.Second
+	HelmInstallTimeout = 5 * time.Minute
 	// DefaultK8sConfigPath the default path for kube
 	DefaultK8sConfigPath = ".kube/config"
 )
