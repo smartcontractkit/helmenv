@@ -24,7 +24,13 @@ spec:
               value: dev
           image: postgres:12
           name: postgres
-          resources: {}
+          resources:
+            requests:
+              cpu: 800m
+              memory: 1024Mi
+            limits:
+              cpu: 1600m
+              memory: 2048Mi
           volumeMounts:
             - mountPath: /docker-entrypoint-initdb.d/init.sql
               name: postgres-cm0

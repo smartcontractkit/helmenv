@@ -32,7 +32,13 @@ spec:
               containerPort: 9090
             - name: web-grpc
               containerPort: 9091
-          resources: {}
+          resources:
+            requests:
+              cpu: 800m
+              memory: 1024Mi
+            limits:
+              cpu: 1600m
+              memory: 2048Mi
           volumeMounts:
             - mountPath: /root/.terra/config
               name: terrad-cm0
