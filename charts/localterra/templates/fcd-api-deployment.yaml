@@ -95,7 +95,13 @@ spec:
           ports:
             - name: fcd
               containerPort: 3060
-          resources: {}
+          resources:
+            requests:
+              cpu: 800m
+              memory: 1024Mi
+            limits:
+              cpu: 1600m
+              memory: 2048Mi
           volumeMounts:
             - mountPath: /app/logs
               name: fcd-api-cm0
