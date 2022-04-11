@@ -11,6 +11,9 @@ data:
   init.sh: |
     #!/bin/sh
 
+    echo "Installing dependencies"
+    apk add build-base
+
     echo "Waiting for $TEST_FILE to start being copied"
     until [ -f $TEST_FILE ]
     do
