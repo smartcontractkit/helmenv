@@ -6,21 +6,21 @@ chainlink:
   p2p_port: 8090
   resources:
     requests:
-      cpu: 450m
+      cpu: 350m
       memory: 1024Mi
     limits:
-      cpu: 450m
+      cpu: 350m
       memory: 1024Mi
 db:
   stateful: false
   capacity: 1Gi
   resources:
     requests:
-      cpu: 350m
-      memory: 1024Mi
+      cpu: 250m
+      memory: 256Mi
     limits:
-      cpu: 350m
-      memory: 1024Mi
+      cpu: 250m
+      memory: 256Mi
 replicas: 1
 
 env:
@@ -47,7 +47,7 @@ env:
   p2p_listen_port: "6690"
   root: ./clroot
   secure_cookies: "false"
-  eth_max_in_flight_transactions: "5000"
+  eth_max_in_flight_transactions: "16"
   keeper_default_transaction_queue_depth: "1"
   keeper_registry_sync_interval: "5s"
   keeper_minimum_required_confirmations: "1"

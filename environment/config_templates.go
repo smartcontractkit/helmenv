@@ -64,9 +64,9 @@ func NewChainlinkConfig(
 		nameSpacePrefix = optionalNamespacePrefix
 	}
 	charts := Charts{
-		"mockserver-config": {Index: 2},
-		"mockserver":        {Index: 3},
-		"chainlink":         NewChainlinkChart(4, chainlinkValues),
+		"mockserver-config": {Index: 1},
+		"mockserver":        {Index: 2},
+		"chainlink":         NewChainlinkChart(3, chainlinkValues),
 	}
 
 	networkCharts := map[string]*networkChart{}
@@ -116,17 +116,17 @@ func PerformanceGeth() (string, map[string]interface{}) {
 	values := map[string]interface{}{}
 	values["resources"] = map[string]interface{}{
 		"requests": map[string]interface{}{
-			"cpu":    "4",
-			"memory": "4096Mi",
+			"cpu":    "1",
+			"memory": "1024Mi",
 		},
 		"limits": map[string]interface{}{
-			"cpu":    "4",
-			"memory": "4096Mi",
+			"cpu":    "1",
+			"memory": "1024Mi",
 		},
 	}
 	values["config_args"] = map[string]interface{}{
 		"--dev.period":      "1",
-		"--miner.threads":   "4",
+		"--miner.threads":   "1",
 		"--miner.gasprice":  "10000000000",
 		"--miner.gastarget": "30000000000",
 		"--cache":           "4096",
@@ -139,17 +139,17 @@ func RealisticGeth() (string, map[string]interface{}) {
 	values := map[string]interface{}{}
 	values["resources"] = map[string]interface{}{
 		"requests": map[string]interface{}{
-			"cpu":    "4",
-			"memory": "4096Mi",
+			"cpu":    "1",
+			"memory": "1024Mi",
 		},
 		"limits": map[string]interface{}{
-			"cpu":    "4",
-			"memory": "4096Mi",
+			"cpu":    "1",
+			"memory": "1024Mi",
 		},
 	}
 	values["config_args"] = map[string]interface{}{
 		"--dev.period":      "14",
-		"--miner.threads":   "4",
+		"--miner.threads":   "1",
 		"--miner.gasprice":  "10000000000",
 		"--miner.gastarget": "15000000000",
 		"--cache":           "4096",
