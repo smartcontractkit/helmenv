@@ -11,23 +11,18 @@ data:
   init.sh: |
     #!/bin/sh
 
-    echo "Installing dependencies"
-    apk add build-base
-
-    echo "Waiting for $TEST_FILE to start being copied"
-    until [ -f $TEST_FILE ]
+    echo "Waiting for config files"
+    until [ -f $FRAMEWORK_CONFIG_FILE ]
     do
       sleep 1
     done
-    echo "Found $TEST_FILE"
+    echo "Found $FRAMEWORK_CONFIG_FILE"
 
-    CURRENT_FILE_SIZE=$(stat -c%s "$TEST_FILE")
-    until [ "$CURRENT_FILE_SIZE" -eq "$TEST_FILE_SIZE" ]
+    until [ -f $NETWORKS_CONFIG_FILE ]
     do
-      CURRENT_FILE_SIZE=$(stat -c%s "$TEST_FILE")
-      echo "Copied $CURRENT_FILE_SIZE/$TEST_FILE_SIZE bytes"
       sleep 1
     done
+    echo "Found $NETWORKS_CONFIG_FILE"
 
     chmod +x $TEST_FILE
     echo "File details"
@@ -38,5 +33,5 @@ data:
     ldd $TEST_FILE
     echo "-----------"
 
-    echo "Copied $TEST_FILE Successfully! Running test..."
+    echo "Running test..."
     $TEST_FILE --ginkgo.timeout=0 --ginkgo.v --ginkgo.focus {{ .Values.remote_test_runner.test_name }}
