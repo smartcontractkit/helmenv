@@ -120,7 +120,7 @@ func PerformanceGeth() (string, map[string]interface{}) {
 			"memory": "1024Mi",
 		},
 		"limits": map[string]interface{}{
-			"cpu":    "1000m",
+			"cpu":    "1",
 			"memory": "1024Mi",
 		},
 	}
