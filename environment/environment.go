@@ -134,9 +134,16 @@ func DeployLongTestEnvironment(
 		return env, err
 	}
 	testConfigString := string(testConfigBytes)
-	exeFile, err := os.Stat(testExecutablePath)
-	if err != nil {
-		return env, err
+
+	var exeFileSize int64
+	if testExecutablePath == "" {
+		exeFileSize = 0
+	} else {
+		exeFile, err := os.Stat(testExecutablePath)
+		if err != nil {
+			return env, err
+		}
+		exeFileSize = exeFile.Size()
 	}
 
 	err = env.AddChart(&HelmChart{
@@ -149,7 +156,7 @@ func DeployLongTestEnvironment(
 				"slack_api":            slackAPI,
 				"slack_channel":        slackChannel,
 				"slack_user_id":        slackUser,
-				"test_file_size":       exeFile.Size(),
+				"test_file_size":       exeFileSize,
 			},
 		},
 		Index: 99,
@@ -183,10 +190,15 @@ func DeployLongTestEnvironment(
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
-	destPath = fmt.Sprintf("%s/%s:/root/remote.test", remoteChart.namespaceName, remoteChart.ReleaseName)
-	_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, destPath, "remote-test-runner")
-	if err != nil {
-		return nil, errors.Wrap(err, errOut.String())
+
+	if exeFileSize > 0 {
+		destPath = fmt.Sprintf("%s/%s:/root/remote.test", remoteChart.namespaceName, remoteChart.ReleaseName)
+		_, _, errOut, err = remoteChart.CopyToPod(testExecutablePath, destPath, "remote-test-runner")
+		if err != nil {
+			return nil, errors.Wrap(err, errOut.String())
+		} else {
+			log.Warn().Msg("No executable file provided, not uploading one")
+		}
 	}
 
 	return env, err

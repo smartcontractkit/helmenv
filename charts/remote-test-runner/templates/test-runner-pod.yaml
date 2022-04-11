@@ -10,7 +10,7 @@ spec:
         name: remote-test-runner-cm
   containers:
     - name: remote-test-runner
-      image: amd64/alpine
+      image: kalverra/custom-celo-runner
       command: ["sh", "/root/init.sh"]
       volumeMounts:
         - name : configmap-volume
