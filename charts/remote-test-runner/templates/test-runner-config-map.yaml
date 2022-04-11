@@ -24,6 +24,9 @@ data:
     done
     echo "Found $NETWORKS_CONFIG_FILE"
 
+    echo "Installing dependencies"
+    apk add build-base
+
     chmod +x $TEST_FILE
     echo "File details"
     stat $TEST_FILE
