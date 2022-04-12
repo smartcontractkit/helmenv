@@ -10,12 +10,13 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: ./.github/actions/golang-version
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
         id: go-version
-      - name: Install Go ${{ steps.go-version.outputs.go-version }}
+      - run: echo ${{ steps.go-version.outputs.golang_version }}
+      - name: Install Go ${{ steps.go-version.outputs.golang_version }}
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ steps.go-version.outputs.go-version }}
+          go-version: ${{ steps.go-version.outputs.golang_version }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
 
@@ -25,12 +26,12 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: ./.github/actions/golang-version
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
         id: go-version
-      - name: Install Go ${{ steps.go-version.outputs.go-version }}
+      - name: Install Go ${{ steps.go-version.outputs.golang_version }}
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ steps.go-version.outputs.go-version }}
+          go-version: ${{ steps.go-version.outputs.golang_version }}
       - name: Write Go List
         run: go list -json -deps ./... > go.list
       - name: Nancy
