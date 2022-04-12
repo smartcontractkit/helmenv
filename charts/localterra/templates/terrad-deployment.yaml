@@ -34,11 +34,11 @@ spec:
               containerPort: 9091
           resources:
             requests:
+              cpu: 400m
+              memory: 512Mi
+            limits:
               cpu: 800m
               memory: 1024Mi
-            limits:
-              cpu: 1600m
-              memory: 2048Mi
           volumeMounts:
             - mountPath: /root/.terra/config
               name: terrad-cm0
