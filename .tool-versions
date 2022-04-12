@@ -2,3 +2,4 @@ golang 1.18
 golangci-lint 1.45.2
 k3d 5.4.1
 act 0.2.26
+tool-versions-to-env 1.0.6
