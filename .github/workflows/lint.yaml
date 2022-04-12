@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: ./.github/actions/golang-version
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
         id: go-version
       - name: Install Go ${{ steps.go-version.outputs.golang_version }}
         uses: actions/setup-go@v3
