@@ -24,13 +24,10 @@ spec:
               value: dev
           image: postgres:12
           name: postgres
+          {{- if .Values.postgres.resources }}
           resources:
-            requests:
-              cpu: 400m
-              memory: 512Mi
-            limits:
-              cpu: 800m
-              memory: 1024Mi
+            {{ toYaml .Values.postgres.resources | indent 12 }}
+          {{- end }}
           volumeMounts:
             - mountPath: /docker-entrypoint-initdb.d/init.sql
               name: postgres-cm0

@@ -95,13 +95,10 @@ spec:
           ports:
             - name: fcd
               containerPort: 3060
+          {{- if .Values.fcd_api.resources }}
           resources:
-            requests:
-              cpu: 400m
-              memory: 512Mi
-            limits:
-              cpu: 800m
-              memory: 1024Mi
+            {{ toYaml .Values.fcd_api.resources | indent 12 }}
+          {{- end }}
           volumeMounts:
             - mountPath: /app/logs
               name: fcd-api-cm0
