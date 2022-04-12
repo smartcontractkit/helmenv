@@ -95,10 +95,10 @@ spec:
                   name: fcd-env
           image: terramoney/fcd:1.0.0-beta.2
           name: fcd-collector
-          {{- if .Values.fcd_collector.resources }}
+{{- if .Values.fcd_collector.resources }}
           resources:
-            {{ toYaml .Values.fcd_collector.resources | indent 12 }}
-          {{- end }}
+{{ toYaml .Values.fcd_collector.resources | indent 12 }}
+{{- end }}
           volumeMounts:
             - mountPath: /app/logs
               name: fcd-collector-cm0

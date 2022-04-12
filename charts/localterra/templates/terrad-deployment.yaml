@@ -32,10 +32,10 @@ spec:
               containerPort: 9090
             - name: web-grpc
               containerPort: 9091
-          {{- if .Values.terrad.resources }}
+{{- if .Values.terrad.resources }}
           resources:
-            {{ toYaml .Values.terrad.resources | indent 12 }}
-          {{- end }}
+{{ toYaml .Values.terrad.resources | indent 12 }}
+{{- end }}
           volumeMounts:
             - mountPath: /root/.terra/config
               name: terrad-cm0

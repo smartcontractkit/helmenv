@@ -95,10 +95,10 @@ spec:
           ports:
             - name: fcd
               containerPort: 3060
-          {{- if .Values.fcd_api.resources }}
+{{- if .Values.fcd_api.resources }}
           resources:
-            {{ toYaml .Values.fcd_api.resources | indent 12 }}
-          {{- end }}
+{{ toYaml .Values.fcd_api.resources | indent 12 }}
+{{- end }}
           volumeMounts:
             - mountPath: /app/logs
               name: fcd-api-cm0

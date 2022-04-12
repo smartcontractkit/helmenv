@@ -24,10 +24,10 @@ spec:
               value: dev
           image: postgres:12
           name: postgres
-          {{- if .Values.postgres.resources }}
+{{- if .Values.postgres.resources }}
           resources:
-            {{ toYaml .Values.postgres.resources | indent 12 }}
-          {{- end }}
+{{ toYaml .Values.postgres.resources | indent 12 }}
+{{- end }}
           volumeMounts:
             - mountPath: /docker-entrypoint-initdb.d/init.sql
               name: postgres-cm0
