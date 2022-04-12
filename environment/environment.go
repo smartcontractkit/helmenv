@@ -518,7 +518,7 @@ func (k *Environment) removeNamespace() error {
 }
 
 // runGoForwarder runs port forwarder as a goroutine
-func (k *Environment) runGoForwarder(chartConnection *ChartConnection, portRules []string) error {
+func (k *Environment) runGoForwarder(chartConnection *ChartConnection, portRules []string, portForwardTimeout time.Duration) error {
 	podName := chartConnection.PodName
 	roundTripper, upgrader, err := spdy.RoundTripperFor(k.k8sConfig)
 	if err != nil {
@@ -547,7 +547,13 @@ func (k *Environment) runGoForwarder(chartConnection *ChartConnection, portRules
 		}
 	}()
 
-	<-readyChan
+	select {
+	case <-readyChan:
+		break
+	case <-time.After(portForwardTimeout):
+		return errors.New("Timed out waiting for port forwarding")
+	}
+
 	if len(errOut.String()) > 0 {
 		return fmt.Errorf("error on forwarding k8s port: %v", errOut.String())
 	}

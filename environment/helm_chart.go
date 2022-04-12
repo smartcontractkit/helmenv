@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"helm.sh/helm/v3/pkg/chart"
 
@@ -456,5 +457,5 @@ func (hc *HelmChart) connectPod(connectionInfo *ChartConnection, rules []string)
 	if len(rules) == 0 {
 		return nil
 	}
-	return hc.env.runGoForwarder(connectionInfo, rules)
+	return hc.env.runGoForwarder(connectionInfo, rules, time.Second * 30)
 }
