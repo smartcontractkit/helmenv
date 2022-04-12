@@ -6,8 +6,8 @@ sol:
     version: v1.9.14
   resources:
     requests:
-      cpu: 800m
-      memory: 2000Mi
+      cpu: 2000m
+      memory: 4000Mi
     limits:
-      cpu: 1600m
+      cpu: 2000m
       memory: 4000Mi

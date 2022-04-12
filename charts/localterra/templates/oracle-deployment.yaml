@@ -25,8 +25,8 @@ spec:
               value: http://terrad:1317
           image: terramoney/pseudo-feeder:bombay
           name: oracle
-          {{- if .Values.oracle.resources }}
+{{- if .Values.oracle.resources }}
           resources:
-            {{ toYaml .Values.oracle.resources | indent 12 }}
-          {{- end }}
+{{ toYaml .Values.oracle.resources | indent 12 }}
+{{- end }}
       restartPolicy: Always
