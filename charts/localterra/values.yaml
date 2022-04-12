@@ -1,0 +1,44 @@
+fcd_api:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1024Mi
+
+fcd_collector:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1024Mi
+
+oracle:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1024Mi
+
+postgres:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1024Mi
+
+terrad:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 512Mi
+    limits:
+      cpu: 800m
+      memory: 1024Mi

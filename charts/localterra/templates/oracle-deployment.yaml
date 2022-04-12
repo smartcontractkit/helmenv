@@ -25,11 +25,8 @@ spec:
               value: http://terrad:1317
           image: terramoney/pseudo-feeder:bombay
           name: oracle
+          {{- if .Values.oracle.resources }}
           resources:
-            requests:
-              cpu: 400m
-              memory: 512Mi
-            limits:
-              cpu: 800m
-              memory: 1024Mi
+            {{ toYaml .Values.oracle.resources | indent 12 }}
+          {{- end }}
       restartPolicy: Always

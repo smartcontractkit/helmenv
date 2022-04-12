@@ -28,13 +28,10 @@ spec:
               containerPort: 8899
             - name: ws-rpc
               containerPort: 8900
+          {{- if .Values.sol.resources }}
           resources:
-            requests:
-              memory: {{ .Values.resources.requests.memory }}
-              cpu: {{ .Values.resources.requests.cpu }}
-            limits:
-              memory: {{ .Values.resources.limits.memory }}
-              cpu: {{ .Values.resources.limits.cpu }}
+            {{ toYaml .Values.sol.resources | indent 12 }}
+          {{- end }}
           command: ["solana-test-validator"]
           args: ["-r", "--mint", "AAxAoGfkbWnbgsiQeAanwUvjv6bQrM5JS8Vxv1ckzVxg"]
 
