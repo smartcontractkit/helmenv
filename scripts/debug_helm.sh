@@ -9,7 +9,7 @@ CHARTS_DIR="${SCRIPT_DIR}"/../charts/
 # Start in the charts dir
 cd "${CHARTS_DIR}"
 
-# Clean up the path because some versionf of sh don't like the /../ in the loop
+# Clean up the path because some versions of sh don't like the /../ in the loop
 CHARTS_DIR="$(pwd)"
 
 debug_directory(){
@@ -18,10 +18,9 @@ debug_directory(){
     helm template "${directory}" --debug
 }
 
-for directory in "${CHARTS_DIR}"/*/     # list directories in the form "/tmp/dirname/"
+for directory in "${CHARTS_DIR}"/*/     # list directories
 do
     directory=${directory%*/}      # remove the trailing "/"
-    echo "${directory##*/}"    # print everything after the final "/"
     debug_directory "${directory}"
 done
 
