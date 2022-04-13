@@ -1,7 +1,6 @@
 name: Linting
 on:
-  pull_request:
-    branches: [master]
+  push:
     
 jobs:
   golangci:
@@ -36,3 +35,17 @@ jobs:
         run: go list -json -deps ./... > go.list
       - name: Nancy
         uses: sonatype-nexus-community/nancy-github-action@main
+
+  helm-template-check:
+    name: Verify Helm Template Formats
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v3
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
+        id: tool-versions
+      - uses: azure/setup-helm@v2.1
+        with:
+          version: ${{ steps.tool-versions.outputs.helm_version }}
+      - name: Check templates
+        run: make lint_helm_templates

@@ -22,6 +22,9 @@ endif
 lint: ## run linter
 	golangci-lint --color=always run ./... -v
 
+lint_helm_templates:
+	./scripts/debug_helm.sh
+
 .PHONY: test
 test: # run all programmatic interaction tests
 	go test -v -p 5 ./...
@@ -46,5 +49,6 @@ ifeq ($(OSFLAG),$(OSX))
 	asdf plugin add act https://github.com/grimoh/asdf-act.git || true
 	asdf plugin add golangci-lint https://github.com/hypnoglow/asdf-golangci-lint.git || true
 	asdf plugin add tool-versions-to-env https://github.com/smartcontractkit/tool-versions-to-env-action.git || true
+	asdf plugin-add helm https://github.com/Antiarchitect/asdf-helm.git || true
 	asdf install
 endif
