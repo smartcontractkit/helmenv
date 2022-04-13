@@ -42,7 +42,10 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - name: Install asdf dependencies
-        uses: asdf-vm/actions/install@v1
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
+        id: tool-versions
+      - uses: azure/setup-helm@v1
+        with:
+          version: ${{ steps.tool-versions.outputs.helm_version }}
       - name: Check templates
         run: make lint_helm_templates
