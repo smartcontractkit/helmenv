@@ -52,6 +52,7 @@ env:
   keeper_registry_sync_interval: "5s"
   keeper_minimum_required_confirmations: "1"
   keeper_registry_perform_gas_overhead: "150000"
+  keeper_turn_look_back: "0"
   explorer_url:
   explorer_access_key:
   explorer_secret:
