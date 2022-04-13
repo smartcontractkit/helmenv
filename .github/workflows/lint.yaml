@@ -1,7 +1,6 @@
 name: Linting
 on:
-  pull_request:
-    branches: [master]
+  push:
     
 jobs:
   golangci:
@@ -36,3 +35,12 @@ jobs:
         run: go list -json -deps ./... > go.list
       - name: Nancy
         uses: sonatype-nexus-community/nancy-github-action@main
+
+  helm-template-check:
+    name: Verify Helm Template Formats
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install asdf dependencies
+        uses: asdf-vm/actions/install@v1
+      - name: Check templates
+        run: make lint_helm_templates
