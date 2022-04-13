@@ -40,6 +40,8 @@ jobs:
     name: Verify Helm Template Formats
     runs-on: ubuntu-latest
     steps:
+      - name: Check out Code
+        uses: actions/checkout@v3
       - name: Install asdf dependencies
         uses: asdf-vm/actions/install@v1
       - name: Check templates
