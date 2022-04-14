@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.7
         id: go-version
       - run: echo ${{ steps.go-version.outputs.golang_version }}
       - name: Install Go ${{ steps.go-version.outputs.golang_version }}
@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.7
         id: go-version
       - name: Install Go ${{ steps.go-version.outputs.golang_version }}
         uses: actions/setup-go@v3
@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Check out Code
         uses: actions/checkout@v3
-      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.6
+      - uses: smartcontractkit/tool-versions-to-env-action@v1.0.7
         id: tool-versions
       - uses: azure/setup-helm@v2.1
         with:
