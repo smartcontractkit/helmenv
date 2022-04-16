@@ -247,27 +247,6 @@ func (k *Environment) Disconnect() {
 	}
 }
 
-//// Teardown tears down the helm releases
-//func (k *Environment) Teardown() error {
-//	k.Disconnect()
-//	for _, c := range k.Charts {
-//		log.Debug().Str("Release", c.ReleaseName).Msg("Uninstalling Helm release")
-//		if _, err := action.NewUninstall(c.actionConfig).Run(c.ReleaseName); err != nil {
-//			if !strings.Contains(err.Error(), "release: not found") { // If the release isn't installed, assume it didn't make it that far
-//				return err
-//			}
-//			log.Warn().Str("Release Name", c.ReleaseName).Msg("Unable to find release to uninstall it")
-//		}
-//	}
-//	if err := k.removeNamespace(); err != nil {
-//		return err
-//	}
-//	if err := k.SyncConfig(); err != nil {
-//		return err
-//	}
-//	return nil
-//}
-
 // Teardown tears down the helm releases
 func (k *Environment) Teardown() error {
 	k.Disconnect()
