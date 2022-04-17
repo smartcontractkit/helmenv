@@ -130,6 +130,18 @@ func (hc *HelmChart) Deploy() error {
 	return nil
 }
 
+// Uninstall uninstalls the helm chart
+func (hc *HelmChart) Uninstall() error {
+	log.Debug().Str("Release", hc.ReleaseName).Msg("Uninstalling Helm release")
+	if _, err := action.NewUninstall(hc.actionConfig).Run(hc.ReleaseName); err != nil {
+		if !strings.Contains(err.Error(), "release: not found") { // If the release isn't installed, assume it didn't make it that far
+			return err
+		}
+		log.Warn().Str("Release Name", hc.ReleaseName).Msg("Unable to find release to uninstall it")
+	}
+	return nil
+}
+
 // Upgrade an already deployed Helm chart with new values
 func (hc *HelmChart) Upgrade() error {
 	helmChart, err := hc.loadChart()
@@ -457,5 +469,5 @@ func (hc *HelmChart) connectPod(connectionInfo *ChartConnection, rules []string)
 	if len(rules) == 0 {
 		return nil
 	}
-	return hc.env.runGoForwarder(connectionInfo, rules, time.Second * 30)
+	return hc.env.runGoForwarder(connectionInfo, rules, time.Second*30)
 }

@@ -45,7 +45,7 @@ spec:
             httpGet:
               path: /liveness/probe
               port: serviceport
-            initialDelaySeconds: 5
+            initialDelaySeconds: 1
             periodSeconds: 5
             successThreshold: 1
             failureThreshold: 10
@@ -53,10 +53,17 @@ spec:
             httpGet:
               path: /liveness/probe
               port: serviceport
-            initialDelaySeconds: 5
+            initialDelaySeconds: 1
             periodSeconds: 30
             successThreshold: 1
             failureThreshold: 10
+          startupProbe:
+            httpGet:
+              path: /liveness/probe
+              port: serviceport
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            failureThreshold: 20
           env:
             - name: LOG_LEVEL
               value: {{ .Values.app.logLevel | quote }}
