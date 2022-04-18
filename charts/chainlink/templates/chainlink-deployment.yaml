@@ -39,7 +39,7 @@ spec:
             name: {{ .Release.Name }}-cm
       containers:
         - name: chainlink-db
-          image: postgres:11.6
+          image: postgres:11.15
           command:
             - docker-entrypoint.sh
           args:
