@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: node-registrar
+  name: node-registrar-{{ .Release.Name }}
   labels:
-    app: node-registrar
+    app: node-registrar-{{ .Release.Name }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
@@ -11,12 +11,12 @@ spec:
   replicas: {{ .Values.bootnodeRegistrar.replicas }}
   selector:
     matchLabels:
-      app: node-registrar
+      app: node-registrar-{{ .Release.Name }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: node-registrar
+        app: node-registrar-{{ .Release.Name }}
         release: {{ .Release.Name }}
     spec:
       containers:

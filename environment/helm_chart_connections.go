@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // Protocol represents a URL scheme to use when fetching connection details
@@ -21,6 +23,24 @@ const (
 	// HTTPS : Hypertext Transfer Protocol Secure
 	HTTPS
 )
+
+// FindRemoteURLs returns URLs for any chart by prefix/portName/connectionType
+func FindRemoteURLs(e *Environment, prefix string, portName string, connectionType Protocol) func(e *Environment) ([]*url.URL, error) {
+	return func(e *Environment) ([]*url.URL, error) {
+		urls := make([]*url.URL, 0)
+		for _, c := range e.Charts {
+			if strings.HasPrefix(c.ReleaseName, prefix) {
+				u, err := c.ChartConnections.LocalURLByPort(portName, connectionType)
+				if err != nil {
+					return nil, err
+				}
+				urls = append(urls, u)
+			}
+		}
+		log.Debug().Interface("URLs", urls).Msg("URLs found")
+		return urls, nil
+	}
+}
 
 // ChartConnection info about connected pod ports
 type ChartConnection struct {
