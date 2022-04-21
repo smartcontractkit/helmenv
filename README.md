@@ -111,4 +111,4 @@ Presets:
 
 - [x] Chainlink <-> ETH preset
 - [x] Chainlink <-> Relay preset
-- [ ] Chainlink <-> Multinode network x2 preset (reorg testing)
+- [x] Chainlink <-> Multinode network x2 preset (reorg testing)
