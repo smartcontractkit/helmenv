@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: geth
+  name: geth-{{ .Release.Name }}
   labels:
-    app: geth
+    app: geth-{{ .Release.Name }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
@@ -11,12 +11,12 @@ spec:
   replicas: {{ .Values.geth.tx.replicas }}
   selector:
     matchLabels:
-      app: geth
+      app: geth-{{ .Release.Name }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: geth
+        app: geth-{{ .Release.Name }}
         release: {{ .Release.Name }}
         tx: "0"
     spec:

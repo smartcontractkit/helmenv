@@ -1,7 +1,7 @@
 imagePullPolicy: IfNotPresent
 
 bootnode:
-  replicas: 2
+  replicas: 1
   image:
     repository: ethereum/client-go
     tag: alltools-v1.10.6

@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: miner-node
+  name: miner-node-{{ .Release.Name }}
   labels:
-    app: miner-node
+    app: miner-node-{{ .Release.Name }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
@@ -11,12 +11,12 @@ spec:
   replicas: {{ .Values.geth.miner.replicas }}
   selector:
     matchLabels:
-      app: miner-node
+      app: miner-node-{{ .Release.Name }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: miner-node
+        app: miner-node-{{ .Release.Name }}
         release: {{ .Release.Name }}
         miner: "0"
     spec:
@@ -40,9 +40,9 @@ spec:
           limits:
             cpu: "3"
         ports:
-        - name: http-rpc
+        - name: http-rpc-miner
           containerPort: 9544
-        - name: ws-rpc
+        - name: ws-rpc-miner
           containerPort: 9546
         - name: discovery-udp
           containerPort: 30303
