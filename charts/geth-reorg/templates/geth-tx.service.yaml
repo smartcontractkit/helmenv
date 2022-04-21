@@ -1,15 +1,15 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth
+  name: geth-{{ .Release.Name }}
   labels:
-    app: geth
+    app: geth-{{ .Release.Name }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   selector:
-    app: geth
+    app: geth-{{ .Release.Name }}
   type: {{ .Values.geth.tx.service.type }}
   ports:
   - name: http-rpc

@@ -1,9 +1,11 @@
 package environment
 
 import (
+	"path/filepath"
 	"reflect"
 
 	"github.com/rs/zerolog/log"
+	"github.com/smartcontractkit/helmenv/tools"
 )
 
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
@@ -16,9 +18,9 @@ func NewChainlinkCCIPConfig(chainlinkValues map[string]interface{}) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-ccip",
 		Charts: Charts{
-			"localterra": {Index: 1},
-			"geth-reorg": {Index: 2},
-			"chainlink":  NewChainlinkChart(3, chainlinkValues),
+			"geth-reorg":   {Index: 1, ReleaseName: "geth-reorg", Path: filepath.Join(tools.ChartsRoot, "geth-reorg")},
+			"geth-reorg-2": {Index: 1, ReleaseName: "geth-reorg-2", Path: filepath.Join(tools.ChartsRoot, "geth-reorg")},
+			"chainlink":    NewChainlinkChart(3, ChainlinkReplicas(5, chainlinkValues)),
 		},
 	}
 }
