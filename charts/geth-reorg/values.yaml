@@ -15,7 +15,7 @@ bootnodeRegistrar:
 geth:
   image:
     repository: ethereum/client-go
-    tag: v1.10.6
+    tag: v1.10.17
   tx:
     replicas: 1
     service:

@@ -63,7 +63,15 @@ data:
         "homesteadBlock": 0,
         "eip150Block": 0,
         "eip155Block": 0,
-        "eip158Block": 0
+        "eip158Block": 0,
+        "eip160Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0
       },
       "nonce": "0x0000000000000042",
       "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
