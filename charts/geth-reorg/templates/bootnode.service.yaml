@@ -13,8 +13,8 @@ spec:
     release: {{ .Release.Name }}
   clusterIP: None
   ports:
-  - name: discovery
-    port: 30301
-    protocol: UDP
-  - name: http
-    port: 8080
+    - name: discovery
+      port: 30301
+      protocol: UDP
+    - name: http
+      port: 8080
