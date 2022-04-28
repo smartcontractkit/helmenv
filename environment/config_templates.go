@@ -14,13 +14,35 @@ func NewChainlinkChart(index int, values map[string]interface{}) *HelmChart {
 }
 
 // NewChainlinkCCIPReorgConfig returns a Chainlink environment for the purpose of CCIP testing
-func NewChainlinkCCIPReorgConfig(chainlinkValues map[string]interface{}) *Config {
+func NewChainlinkCCIPReorgConfig(chainlinkValues map[string]interface{}, networkIDs []int) *Config {
 	return &Config{
 		NamespacePrefix: "chainlink-ccip",
 		Charts: Charts{
-			"geth-reorg":   {Index: 1, ReleaseName: "geth-reorg", Path: filepath.Join(tools.ChartsRoot, "geth-reorg")},
-			"geth-reorg-2": {Index: 1, ReleaseName: "geth-reorg-2", Path: filepath.Join(tools.ChartsRoot, "geth-reorg")},
-			"chainlink":    NewChainlinkChart(3, ChainlinkReplicas(5, chainlinkValues)),
+			"geth-reorg": {
+				Index:       1,
+				ReleaseName: "geth-reorg",
+				Path:        filepath.Join(tools.ChartsRoot, "geth-reorg"),
+				Values: map[string]interface{}{
+					"geth": map[string]interface{}{
+						"genesis": map[string]interface{}{
+							"networkId": networkIDs[0],
+						},
+					},
+				},
+			},
+			"geth-reorg-2": {
+				Index:       1,
+				ReleaseName: "geth-reorg-2",
+				Path:        filepath.Join(tools.ChartsRoot, "geth-reorg"),
+				Values: map[string]interface{}{
+					"geth": map[string]interface{}{
+						"genesis": map[string]interface{}{
+							"networkId": networkIDs[1],
+						},
+					},
+				},
+			},
+			"chainlink": NewChainlinkChart(3, ChainlinkReplicas(5, chainlinkValues)),
 		},
 	}
 }
