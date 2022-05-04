@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/smartcontractkit/helmenv/tools"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
@@ -68,7 +69,7 @@ func NewEnvironment(config *Config) (*Environment, error) {
 
 // DeployEnvironment returns a deployed environment from a given config that can be pre-defined within
 // the library, or passed in as part of lib usage
-func DeployEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+func DeployEnvironment(config *Config) (*Environment, error) {
 	e, err := NewEnvironment(config)
 	if err != nil {
 		return nil, err
@@ -76,15 +77,21 @@ func DeployEnvironment(config *Config, chartDirectory string) (*Environment, err
 	if err := e.Init(config.NamespacePrefix); err != nil {
 		return nil, err
 	}
+	log.Warn().Interface("Charts", config.Charts).Send()
 	for key, chart := range config.Charts {
-		if len(chart.Path) == 0 {
-			chart.Path = key
+		// if there is no path specified, resolve chart key name as a dir in default charts dir,
+		// else resolve a relative caller path as an absolute path
+		if chart.Path == "" {
+			chart.Path = filepath.Join(tools.ChartsRoot, key)
+		} else {
+			ap, err := filepath.Abs(chart.Path)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to resolve an absolute chart path")
+			}
+			chart.Path = ap
 		}
 		if len(chart.ReleaseName) == 0 {
 			chart.ReleaseName = key
-		}
-		if len(chartDirectory) > 0 && !strings.Contains(chart.Path, chartDirectory) {
-			chart.Path = path.Join(chartDirectory, chart.Path)
 		}
 		if err := e.AddChart(chart); err != nil {
 			return nil, err
@@ -113,7 +120,7 @@ func DeployLongTestEnvironment(
 	networksConfigPath,
 	testExecutablePath string,
 ) (*Environment, error) {
-	env, err := DeployEnvironment(config, chartDirectory)
+	env, err := DeployEnvironment(config)
 	if err != nil {
 		return nil, err
 	}

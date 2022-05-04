@@ -201,7 +201,7 @@ func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environmen
 	if len(envFile) > 0 {
 		return DeployOrLoadEnvironmentFromConfigFile(chartDirectory, envFile)
 	}
-	return deployOrLoadEnvironment(config, chartDirectory)
+	return deployOrLoadEnvironment(config)
 }
 
 // DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
@@ -236,15 +236,15 @@ func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, configFilePath string
 	// Always set to true when loading from file as the environment state would be lost on deployment since if false
 	// config isn't written to disk
 	config.Persistent = true
-	return deployOrLoadEnvironment(config, chartDirectory)
+	return deployOrLoadEnvironment(config)
 }
 
-func deployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+func deployOrLoadEnvironment(config *Config) (*Environment, error) {
 	if err := envconfig.Process("", config); err != nil {
 		return nil, err
 	}
 	if len(config.Namespace) > 0 {
 		return LoadEnvironment(config)
 	}
-	return DeployEnvironment(config, chartDirectory)
+	return DeployEnvironment(config)
 }
