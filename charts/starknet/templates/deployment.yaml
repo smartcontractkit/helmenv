@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starknet-dev
+  labels:
+    release: {{ .Release.Name }}
+    app: starknet-dev
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      release: {{ .Release.Name }}
+      app: starknet-dev
+  template:
+    metadata:
+      labels:
+        release: {{ .Release.Name }}
+        app: starknet-dev
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+          - name: PYTHONUNBUFFERED
+            value: "1"
+        ports:
+          - name: http
+            containerPort: {{ .Values.service.internalPort }}
+        livenessProbe:
+          httpGet:
+            path: /is_alive
+            port: {{ .Values.service.externalPort }}
+          initialDelaySeconds: 1
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /is_alive
+            port: {{ .Values.service.externalPort }}
+          initialDelaySeconds: 2
+          periodSeconds: 1
+        resources:
+          requests:
+            memory: {{ .Values.resources.requests.memory }}
+            cpu: {{ .Values.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.resources.limits.memory }}
+            cpu: {{ .Values.resources.limits.cpu }}

@@ -1,0 +1,18 @@
+namespace_prefix: chainlink-stark
+charts:
+  geth:
+    index: 1
+  starknet:
+    index: 1
+  mockserver-config:
+    index: 1
+  mockserver:
+    index: 2
+  chainlink:
+    index: 2
+    values:
+      replicas: 5
+      chainlink:
+        image:
+          image: "public.ecr.aws/chainlink/chainlink"
+          version: "latest"

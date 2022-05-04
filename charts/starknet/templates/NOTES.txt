@@ -1,0 +1,2 @@
+StarkNET dev node installed!
+
