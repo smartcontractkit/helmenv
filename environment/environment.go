@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -111,7 +110,6 @@ func DeployEnvironment(config *Config) (*Environment, error) {
 // (more than 30 minutes).
 func DeployLongTestEnvironment(
 	config *Config,
-	chartDirectory,
 	testName,
 	slackAPI,
 	slackChannel,
@@ -147,7 +145,6 @@ func DeployLongTestEnvironment(
 
 	err = env.AddChart(&HelmChart{
 		ReleaseName: "remote-test-runner",
-		Path:        path.Join(chartDirectory, "remote-test-runner"),
 		Values: map[string]interface{}{
 			"remote_test_runner": map[string]interface{}{
 				"test_name":            testName,

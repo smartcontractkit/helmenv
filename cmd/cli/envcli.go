@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/environment"
 	"github.com/smartcontractkit/helmenv/tools"
 	"github.com/urfave/cli/v2"
-	"os"
-	"os/signal"
 )
 
 func init() {
@@ -64,7 +65,7 @@ func main() {
 					if err := os.Setenv("CONFIG_PATH", c.String("outputFile")); err != nil {
 						return err
 					}
-					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(chartsRoot, preset)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(preset)
 					if err != nil {
 						return err
 					}
@@ -81,7 +82,7 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -113,7 +114,7 @@ func main() {
 				Flags:   []cli.Flag{environmentFlag},
 				Action: func(c *cli.Context) error {
 					environmentPath := c.String("environment")
-					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -152,7 +153,7 @@ func main() {
 					environmentPath := c.String("environment")
 					artifactsDir := c.String("artifacts")
 					dbName := c.String("database")
-					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+					e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 					if err != nil {
 						return err
 					}
@@ -182,7 +183,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosTemplate := c.String("template")
-							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 							if err != nil {
 								return err
 							}
@@ -208,7 +209,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
 							chaosID := c.String("chaos_id")
-							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 							if err != nil {
 								return err
 							}
@@ -229,7 +230,7 @@ func main() {
 						Flags:   []cli.Flag{environmentFlag},
 						Action: func(c *cli.Context) error {
 							environmentPath := c.String("environment")
-							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(tools.ChartsRoot, environmentPath)
+							e, err := environment.DeployOrLoadEnvironmentFromConfigFile(environmentPath)
 							if err != nil {
 								return err
 							}

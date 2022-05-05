@@ -195,17 +195,17 @@ func DumpConfigJson(cfg *Config, path string) error {
 
 // DeployOrLoadEnvironment returns a deployed environment from a given preset that can be ones pre-defined within
 // the library, or passed in as part of lib usage
-func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+func DeployOrLoadEnvironment(config *Config) (*Environment, error) {
 	// Brute force way of allowing the overriding the use of an environment file without a separate function call
 	envFile := os.Getenv("ENVIRONMENT_FILE")
 	if len(envFile) > 0 {
-		return DeployOrLoadEnvironmentFromConfigFile(chartDirectory, envFile)
+		return DeployOrLoadEnvironmentFromConfigFile(envFile)
 	}
 	return deployOrLoadEnvironment(config)
 }
 
 // DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
-func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, configFilePath string) (*Environment, error) {
+func DeployOrLoadEnvironmentFromConfigFile(configFilePath string) (*Environment, error) {
 	contents, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
