@@ -21,7 +21,7 @@ spec:
       containers:
         - name: geth-network
           image: {{ .Values.geth.image.image }}:{{ .Values.geth.image.version }}
-          command: [ "sh", "./root/init.sh" ]
+          command: [ "sh", "./root/init.sh", "--http.vhosts=*" ]
           volumeMounts:
             - name : configmap-volume
               mountPath: /root/init.sh
