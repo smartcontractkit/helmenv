@@ -7,7 +7,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/environment"
-	"github.com/smartcontractkit/helmenv/tools"
 )
 
 func init() {
@@ -16,9 +15,7 @@ func init() {
 
 func main() {
 	e, err := environment.DeployOrLoadEnvironment(
-		environment.NewChainlinkConfig(nil, "helmenv-new-env", environment.DefaultGeth),
-		tools.ChartsRoot,
-	)
+		environment.NewChainlinkConfig(nil, "helmenv-new-env", environment.DefaultGeth))
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
