@@ -10,7 +10,7 @@ import (
 
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
 func NewChainlinkChart(index int, values map[string]interface{}) *HelmChart {
-	return &HelmChart{Path: "chainlink", Values: values, Index: index}
+	return &HelmChart{Values: values, Index: index}
 }
 
 // NewChainlinkCCIPReorgConfig returns a Chainlink environment for the purpose of CCIP testing
