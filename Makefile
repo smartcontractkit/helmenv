@@ -31,8 +31,6 @@ test: # run all programmatic interaction tests
 
 .PHONY: install_cli
 install_cli: # installs CLI
-	# paths can't be relative when embedding, so copy to the target file to embed
-	cp -r charts/ environment/charts/
 	go install cmd/cli/envcli.go
 
 install_tools:

@@ -38,6 +38,7 @@ const (
 )
 
 var (
+	//nolint
 	//go:embed charts/*/**
 	ChartsFS embed.FS
 )
