@@ -3,6 +3,7 @@ package environment
 import (
 	"bytes"
 	"context"
+	"embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smartcontractkit/helmenv/tools"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
@@ -35,6 +35,11 @@ const (
 	HelmInstallTimeout = 5 * time.Minute
 	// DefaultK8sConfigPath the default path for kube
 	DefaultK8sConfigPath = ".kube/config"
+)
+
+var (
+	//go:embed charts/*/**
+	ChartsFS embed.FS
 )
 
 // Environment build and deployed from several helm Charts
@@ -76,12 +81,11 @@ func DeployEnvironment(config *Config) (*Environment, error) {
 	if err := e.Init(config.NamespacePrefix); err != nil {
 		return nil, err
 	}
-	log.Warn().Interface("Charts", config.Charts).Send()
 	for key, chart := range config.Charts {
-		// if there is no path specified, resolve chart key name as a dir in default charts dir,
+		// if there is no path specified, resolve chart as an embedded chart
 		// else resolve a relative caller path as an absolute path
 		if chart.Path == "" {
-			chart.Path = filepath.Join(tools.ChartsRoot, key)
+			chart.Path = filepath.Join("charts", key, "/")
 		} else {
 			ap, err := filepath.Abs(chart.Path)
 			if err != nil {
