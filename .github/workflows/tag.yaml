@@ -19,8 +19,6 @@ jobs:
           go-version: ${{ steps.go-version.outputs.golang_version }}
       - name: Unshallow
         run: git fetch --prune --unshallow
-      - name: Copy charts to embed
-        run: cp -r charts/ environment/charts/
 
       - name: Create release
         uses: goreleaser/goreleaser-action@v2

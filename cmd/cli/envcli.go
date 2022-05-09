@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/smartcontractkit/helmenv/environment"
-	"github.com/smartcontractkit/helmenv/tools"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,20 +46,9 @@ func main() {
 						Usage:    "file path for the outputted environment config",
 						Required: false,
 					},
-					&cli.StringFlag{
-						Name:     "chartsRoot",
-						Aliases:  []string{"c"},
-						Usage:    "override charts root dir",
-						Required: false,
-					},
 				},
 				Action: func(c *cli.Context) error {
 					preset := c.String("preset")
-					var chartsRoot string
-					chartsRoot = c.String("chartsRoot")
-					if chartsRoot == "" {
-						chartsRoot = tools.ChartsRoot
-					}
 					// Override the `Path` key in Config to dictate where the file is written
 					if err := os.Setenv("CONFIG_PATH", c.String("outputFile")); err != nil {
 						return err
