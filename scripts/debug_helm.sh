@@ -4,7 +4,7 @@ set -e
 
 # get this scripts directory
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )
-CHARTS_DIR="${SCRIPT_DIR}"/../charts/
+CHARTS_DIR="${SCRIPT_DIR}"/../environment/charts/
 
 # Start in the charts dir
 cd "${CHARTS_DIR}"

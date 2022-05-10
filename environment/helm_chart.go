@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"path"
@@ -13,12 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"helm.sh/helm/v3/pkg/chart"
-
 	"github.com/cavaliercoder/grab"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/kube"
@@ -271,23 +271,80 @@ func (hc *HelmChart) init() error {
 		hc.namespaceName,
 		os.Getenv("HELM_DRIVER"),
 		func(format string, v ...interface{}) {
-			log.Debug().Str("LogType", "Helm").Msg(fmt.Sprintf(format, v...))
+			log.Info().Str("LogType", "Helm").Msg(fmt.Sprintf(format, v...))
 		}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (hc *HelmChart) loadChart() (*chart.Chart, error) {
-	log.Info().Str("Path", hc.Path).
-		Str("Release", hc.ReleaseName).
-		Str("Namespace", hc.namespaceName).
-		Interface("Override values", hc.Values).
-		Msg("Installing Helm chart")
-	loadedChart, err := loader.Load(hc.Path)
+//getFSFiles gets files from selected FS
+func (hc *HelmChart) getFSFiles(f fs.FS, root string) ([]string, error) {
+	res := make([]string, 0)
+	err := fs.WalkDir(f, root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		res = append(res, path)
+		return nil
+	})
+	return res, err
+}
+
+// loadEmbeddedChartFiles loads embedded chart files
+func (hc *HelmChart) loadEmbeddedChartFiles() ([]*loader.BufferedFile, error) {
+	log.Info().Str("Name", hc.ReleaseName).Msg("Resolving embedded FS chart")
+	fpaths, err := hc.getFSFiles(ChartsFS, hc.Path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, errors.Wrapf(err, "chart: %s not found", hc.Path)
+		}
 		return nil, err
 	}
+	log.Debug().Interface("Paths", fpaths).Msg("Embedded charts paths")
+	var bfs []*loader.BufferedFile
+	for _, fpath := range fpaths {
+		b, err := fs.ReadFile(ChartsFS, fpath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read embedded file")
+		}
+		// must be resolved from the root for every chart where Chart.yaml is located
+		fname := strings.TrimPrefix(fpath, hc.Path+"/")
+		bf := &loader.BufferedFile{
+			Name: fname,
+			Data: b,
+		}
+		bfs = append(bfs, bf)
+	}
+	return bfs, nil
+}
+
+func (hc *HelmChart) loadChart() (*chart.Chart, error) {
+	var err error
+	var loadedChart *chart.Chart
+	log.Info().Str("Path", hc.Path).Msg("Searching chart")
+	loadedChart, err = loader.Load(hc.Path)
+	source := "host"
+	if err != nil {
+		source = "embedded"
+		bfs, err := hc.loadEmbeddedChartFiles()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to resolve embedded chart: %s", hc.Path)
+		}
+		loadedChart, err = loader.LoadFiles(bfs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "faild to load embedded char files: %s", hc.Path)
+		}
+	}
+	log.Info().Str("Path", hc.Path).
+		Str("Source", source).
+		Str("Release", hc.ReleaseName).
+		Str("Namespace", hc.namespaceName).
+		Interface("Overrides", hc.Values).
+		Msg("Installing Helm chart")
 	loadedChart.Values, err = chartutil.CoalesceValues(loadedChart, hc.Values)
 	if err != nil {
 		return nil, err
@@ -313,7 +370,6 @@ func (hc *HelmChart) deployChart() error {
 	if err != nil {
 		return err
 	}
-
 	log.Info().
 		Str("Namespace", hc.namespaceName).
 		Str("Release", hc.ReleaseName).
