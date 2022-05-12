@@ -325,6 +325,9 @@ func (hc *HelmChart) loadEmbeddedChartFiles() ([]*loader.BufferedFile, error) {
 func (hc *HelmChart) loadChart() (*chart.Chart, error) {
 	var err error
 	var loadedChart *chart.Chart
+	if hc.Path == "" {
+		hc.Path = filepath.Join("charts", hc.ReleaseName)
+	}
 	log.Info().Str("Path", hc.Path).Msg("Searching chart")
 	loadedChart, err = loader.Load(hc.Path)
 	source := "host"
