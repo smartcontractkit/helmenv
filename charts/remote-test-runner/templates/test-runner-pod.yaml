@@ -11,7 +11,6 @@ spec:
   containers:
     - name: remote-test-runner
       image: amd64/alpine
-      STOPSIGNAL: 
       command: ["sh", "/root/init.sh"]
       volumeMounts:
         - name : configmap-volume
