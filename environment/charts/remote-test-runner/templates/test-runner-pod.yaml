@@ -42,6 +42,12 @@ spec:
           value: "/root/remote.test"
         - name: "TEST_FILE_SIZE"
           value: "{{ .Values.remote_test_runner.test_file_size }}"
+{{- range $key, $value := .Values.remote_test_runner.custom_remote_env }}
+  {{- if $value }}
+        - name: {{ $key | upper}}
+          value: {{ $value | quote}}
+  {{- end }}
+{{- end }}
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}
