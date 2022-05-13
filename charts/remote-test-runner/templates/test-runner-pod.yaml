@@ -11,6 +11,7 @@ spec:
   containers:
     - name: remote-test-runner
       image: amd64/alpine
+      STOPSIGNAL: 
       command: ["sh", "/root/init.sh"]
       volumeMounts:
         - name : configmap-volume
@@ -19,6 +20,9 @@ spec:
         - name : configmap-volume
           mountPath: /root/init.sh
           subPath: init.sh
+      ports:
+        - name: access
+          containerPort: {{ .Values.remote_test_runner.access_port }}
       env:
         - name: ENVIRONMENT_FILE
           value: /root/test-env.json
@@ -30,6 +34,8 @@ spec:
           value: {{ .Values.remote_test_runner.slack_channel }}
         - name: SLACK_USER_ID
           value: {{ .Values.remote_test_runner.slack_user_id }}
+        - name: ACCESS_PORT
+          value: "{{ .Values.remote_test_runner.access_port }}"
         - name: "GOOS"
           value: "linux"
         - name: "GOARCH"

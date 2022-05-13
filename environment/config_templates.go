@@ -90,7 +90,7 @@ func NewChainlinkConfig(
 	charts := Charts{
 		"mockserver-config": {Index: 1},
 		"mockserver":        {Index: 2},
-		"chainlink":         NewChainlinkChart(3, chainlinkValues),
+		"chainlink":         NewChainlinkChart(2, chainlinkValues),
 	}
 
 	networkCharts := map[string]*networkChart{}
@@ -201,5 +201,40 @@ func ChainlinkReplicas(count int, values map[string]interface{}) map[string]inte
 		values = map[string]interface{}{}
 	}
 	values["replicas"] = count
+	return values
+}
+
+// ChainlinkPerformanceReplicas uses a specified replica count of Chainlink performance nodes
+// Chainlink performance nodes utilize 2 full cores and 4GB RAM
+// Chainlink performance DBs also utilize 1 full core and 2GB RAM
+func ChainlinkPerformanceReplicas(count int, values map[string]interface{}) map[string]interface{} {
+	if values == nil {
+		values = map[string]interface{}{}
+	}
+	values["replicas"] = count
+	values["chainlink"] = map[string]interface{}{
+		"resources": map[string]interface{}{
+			"requests": map[string]interface{}{
+				"cpu":    "2",
+				"memory": "4096Mi",
+			},
+			"limits": map[string]interface{}{
+				"cpu":    "2",
+				"memory": "4096Mi",
+			},
+		},
+	}
+	values["db"] = map[string]interface{}{
+		"resources": map[string]interface{}{
+			"requests": map[string]interface{}{
+				"cpu":    "1",
+				"memory": "2048Mi",
+			},
+			"limits": map[string]interface{}{
+				"cpu":    "1",
+				"memory": "2048Mi",
+			},
+		},
+	}
 	return values
 }
