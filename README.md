@@ -12,13 +12,25 @@ Thin wrapper for Helm to help you interact with `k8s` environments
 - Create a thin wrapper around deployments that works almost like `Helm subcharts` to compose test environments, with only small code part that helps you to configure your env more easily than writing `hooks`
 - Ability to use in both ephemeral deployments for CI as a lib and when creating standalone environment as a CLI
 
-## CLI usage
+## Install
 
-Install
+### ASDF
+
+```sh
+asdf plugin add helmenv https://github.com/smartcontractkit/asdf-helmenv.git
+asdf install helmenv latest
+asdf global helmenv <version>
+
+envcli -h
+```
+
+### From Source
 
 ```sh
 make install_cli
 ```
+
+## CLI usage
 
 Usage docs
 

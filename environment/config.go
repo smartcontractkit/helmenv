@@ -3,6 +3,7 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -52,6 +53,19 @@ func (d *MarshalSafeDuration) UnmarshalJSON(b []byte) error {
 	}
 }
 
+func unmarshalYAML(path string, to interface{}) error {
+	ap, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	log.Info().Str("Path", ap).Msg("Decoding config")
+	f, err := ioutil.ReadFile(ap)
+	if err != nil {
+		return err
+	}
+	return yaml.Unmarshal(f, to)
+}
+
 // Config represents the full configuration of an environment, it can either be defined
 // programmatically at runtime, or defined in files to be used in a CLI or any other application
 type Config struct {
@@ -65,6 +79,18 @@ type Config struct {
 	Namespace          string                           `yaml:"namespace,omitempty" json:"namespace,omitempty" envconfig:"namespace"`
 	Charts             Charts                           `yaml:"charts,omitempty" json:"charts,omitempty" envconfig:"charts"`
 	Experiments        map[string]*chaos.ExperimentInfo `yaml:"experiments,omitempty" json:"experiments,omitempty" envconfig:"experiments"`
+}
+
+func (m *Config) ToJSON() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *Config) Decode(path string) error {
+	// Marshal YAML first, then "envconfig" tags of that struct got marshalled
+	if err := unmarshalYAML(path, &m); err != nil {
+		return err
+	}
+	return envconfig.Process("", m)
 }
 
 // Charts represents a map of charts with some helper methods
@@ -195,17 +221,17 @@ func DumpConfigJson(cfg *Config, path string) error {
 
 // DeployOrLoadEnvironment returns a deployed environment from a given preset that can be ones pre-defined within
 // the library, or passed in as part of lib usage
-func DeployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
-	// Brute force way of allowing the overriding the use of an environment file without a separate function call
+func DeployOrLoadEnvironment(config *Config) (*Environment, error) {
+	//// Brute force way of allowing the overriding the use of an environment file without a separate function call
 	envFile := os.Getenv("ENVIRONMENT_FILE")
 	if len(envFile) > 0 {
-		return DeployOrLoadEnvironmentFromConfigFile(chartDirectory, envFile)
+		return DeployOrLoadEnvironmentFromConfigFile(envFile)
 	}
-	return deployOrLoadEnvironment(config, chartDirectory)
+	return deployOrLoadEnvironment(config)
 }
 
 // DeployOrLoadEnvironmentFromConfigFile returns an environment based on a preset file, mostly for use as a presets CLI
-func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, configFilePath string) (*Environment, error) {
+func DeployOrLoadEnvironmentFromConfigFile(configFilePath string) (*Environment, error) {
 	contents, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
@@ -236,15 +262,15 @@ func DeployOrLoadEnvironmentFromConfigFile(chartDirectory, configFilePath string
 	// Always set to true when loading from file as the environment state would be lost on deployment since if false
 	// config isn't written to disk
 	config.Persistent = true
-	return deployOrLoadEnvironment(config, chartDirectory)
+	return deployOrLoadEnvironment(config)
 }
 
-func deployOrLoadEnvironment(config *Config, chartDirectory string) (*Environment, error) {
+func deployOrLoadEnvironment(config *Config) (*Environment, error) {
 	if err := envconfig.Process("", config); err != nil {
 		return nil, err
 	}
 	if len(config.Namespace) > 0 {
 		return LoadEnvironment(config)
 	}
-	return DeployEnvironment(config, chartDirectory)
+	return DeployEnvironment(config)
 }
