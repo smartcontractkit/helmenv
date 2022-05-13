@@ -111,9 +111,9 @@ func DeployEnvironment(config *Config) (*Environment, error) {
 	return e, e.SyncConfig()
 }
 
-// DeployLongTestEnvironment is used for deploying environment that expect to be running a test for a long time
-// (more than 30 minutes).
-func DeployLongTestEnvironment(
+// DeployRemoteRunnerEnvironment is used for deploying environment with a remote runner inside a pod
+// suitable for a long-running tests
+func DeployRemoteRunnerEnvironment(
 	config *Config,
 	testName,
 	slackAPI,
@@ -123,22 +123,17 @@ func DeployLongTestEnvironment(
 	networksConfigPath,
 	testExecutablePath string,
 ) (*Environment, error) {
-	env, err := DeployEnvironment(config)
+	env, err := DeployOrLoadEnvironment(config)
 	if err != nil {
 		return nil, err
 	}
 	env.Config.Persistent = true
-	err = env.SyncConfigJson()
-	if err != nil {
-		return env, err
-	}
 	log.Info().Str("Test Name", testName).
 		Str("Namespace", env.Namespace).
 		Str("Reading from test Config File", env.Path).
 		Msg("Deploying test runner to run long-running test")
-	// Create a config map with an env variable folder to send with the helm chart
-	// Then have test read from there
-	testConfigBytes, err := os.ReadFile(env.Path)
+	// Marshal env config as JSON to be able to connect to it from inside a pod
+	testConfigBytes, err := env.Config.ToJSON()
 	if err != nil {
 		return env, err
 	}
@@ -173,7 +168,7 @@ func DeployLongTestEnvironment(
 		}
 		return nil, err
 	}
-	if err = env.SyncConfig(); err != nil {
+	if err := env.SyncConfig(); err != nil {
 		return nil, err
 	}
 	remoteChart, err := env.Charts.Get("remote-test-runner")
@@ -196,7 +191,6 @@ func DeployLongTestEnvironment(
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
-
 	return env, err
 }
 
