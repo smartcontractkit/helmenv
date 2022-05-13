@@ -9,10 +9,10 @@ app:
   readOnlyRootFilesystem: false
   resources:
     requests:
-      cpu: 200m
+      cpu: 500m
       memory: 528Mi
     limits:
-      cpu: 200m
+      cpu: 500m
       memory: 528Mi
 
 image:
