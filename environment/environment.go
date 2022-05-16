@@ -122,7 +122,7 @@ func DeployRemoteRunnerEnvironment(
 	frameworkConfigPath,
 	networksConfigPath,
 	testExecutablePath string,
-	customEnvVars []string,
+	customEnvVars []string, // list of environment variables to pull from your env to use in the test
 ) (*Environment, error) {
 	env, err := DeployOrLoadEnvironment(config)
 	if err != nil {
