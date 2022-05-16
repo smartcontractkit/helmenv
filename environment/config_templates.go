@@ -8,6 +8,12 @@ import (
 	"github.com/smartcontractkit/helmenv/tools"
 )
 
+const (
+	mockServerConfigChartName = "mockserver-config"
+	mockServerChartName       = "mockserver"
+	chainlinkChartName        = "chainlink"
+)
+
 // NewChainlinkChart returns a default Chainlink Helm chart based on a set of override values
 func NewChainlinkChart(index int, values map[string]interface{}) *HelmChart {
 	return &HelmChart{Values: values, Index: index}
@@ -83,14 +89,87 @@ func NewChainlinkConfig(
 	optionalNamespacePrefix string,
 	networks ...SimulatedNetwork,
 ) *Config {
+	charts := Charts{
+		mockServerConfigChartName: {Index: 1},
+		mockServerChartName:       {Index: 2},
+		chainlinkChartName:        NewChainlinkChart(2, chainlinkValues),
+	}
+
+	nameSpacePrefix := loadNetworkCharts(optionalNamespacePrefix, charts, networks)
+
+	return &Config{
+		NamespacePrefix: nameSpacePrefix,
+		Charts:          charts,
+	}
+}
+
+// NewPerformanceChainlinkConfig launches an environment with upgraded resources
+// Mockserver launches with 1 CPU and 1 GB of RAM
+// Chainlink DB launches with 1 CPU and 2GB of RAM
+// Chainlink node launches with 2 CPU and 4GB RAM
+func NewPerformanceChainlinkConfig(
+	chainlinkValues map[string]interface{},
+	optionalNamespacePrefix string,
+	networks ...SimulatedNetwork,
+) *Config {
+	// Set the chainlink value resources to a higher level
+	chainlinkValues["chainlink"] = map[string]interface{}{
+		"resources": map[string]interface{}{
+			"requests": map[string]interface{}{
+				"cpu":    "2",
+				"memory": "4096Mi",
+			},
+			"limits": map[string]interface{}{
+				"cpu":    "2",
+				"memory": "4096Mi",
+			},
+		},
+	}
+	chainlinkValues["db"] = map[string]interface{}{
+		"resources": map[string]interface{}{
+			"requests": map[string]interface{}{
+				"cpu":    "1",
+				"memory": "2048Mi",
+			},
+			"limits": map[string]interface{}{
+				"cpu":    "1",
+				"memory": "2048Mi",
+			},
+		},
+	}
+	mockServerValues := map[string]interface{}{
+		"app": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "1",
+					"memory": "1024Mi",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "1",
+					"memory": "1024Mi",
+				},
+			},
+		},
+	}
+	charts := Charts{
+		mockServerConfigChartName: {Index: 1},
+		mockServerChartName:       {Index: 2, Values: mockServerValues},
+		chainlinkChartName:        NewChainlinkChart(2, chainlinkValues),
+	}
+
+	nameSpacePrefix := loadNetworkCharts(optionalNamespacePrefix, charts, networks)
+
+	return &Config{
+		NamespacePrefix: nameSpacePrefix,
+		Charts:          charts,
+	}
+}
+
+// loads and properly configures the network charts, and builds a proper namespace config
+func loadNetworkCharts(optionalNamespacePrefix string, charts Charts, networks []SimulatedNetwork) string {
 	nameSpacePrefix := "chainlink"
 	if optionalNamespacePrefix != "" {
 		nameSpacePrefix = optionalNamespacePrefix
-	}
-	charts := Charts{
-		"mockserver-config": {Index: 1},
-		"mockserver":        {Index: 2},
-		"chainlink":         NewChainlinkChart(2, chainlinkValues),
 	}
 
 	networkCharts := map[string]*networkChart{}
@@ -119,11 +198,7 @@ func NewChainlinkConfig(
 		networkChart.Values["replicas"] = networkChart.Replicas
 		charts[chartName] = &HelmChart{Index: 1, Values: networkChart.Values}
 	}
-
-	return &Config{
-		NamespacePrefix: nameSpacePrefix,
-		Charts:          charts,
-	}
+	return nameSpacePrefix
 }
 
 // SimulatedNetwork is a function that enables launching a simulated network with a returned chart name
@@ -201,40 +276,5 @@ func ChainlinkReplicas(count int, values map[string]interface{}) map[string]inte
 		values = map[string]interface{}{}
 	}
 	values["replicas"] = count
-	return values
-}
-
-// ChainlinkPerformanceReplicas uses a specified replica count of Chainlink performance nodes
-// Chainlink performance nodes utilize 2 full cores and 4GB RAM
-// Chainlink performance DBs also utilize 1 full core and 2GB RAM
-func ChainlinkPerformanceReplicas(count int, values map[string]interface{}) map[string]interface{} {
-	if values == nil {
-		values = map[string]interface{}{}
-	}
-	values["replicas"] = count
-	values["chainlink"] = map[string]interface{}{
-		"resources": map[string]interface{}{
-			"requests": map[string]interface{}{
-				"cpu":    "2",
-				"memory": "4096Mi",
-			},
-			"limits": map[string]interface{}{
-				"cpu":    "2",
-				"memory": "4096Mi",
-			},
-		},
-	}
-	values["db"] = map[string]interface{}{
-		"resources": map[string]interface{}{
-			"requests": map[string]interface{}{
-				"cpu":    "1",
-				"memory": "2048Mi",
-			},
-			"limits": map[string]interface{}{
-				"cpu":    "1",
-				"memory": "2048Mi",
-			},
-		},
-	}
 	return values
 }
