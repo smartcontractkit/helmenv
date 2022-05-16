@@ -6,6 +6,7 @@ remote_test_runner:
   slack_channel: default
   slack_user_id: default
   remote_test_size: 0
+  access_port: 8080
 
 resources:
   requests:

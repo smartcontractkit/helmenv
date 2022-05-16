@@ -81,10 +81,12 @@ type Config struct {
 	Experiments        map[string]*chaos.ExperimentInfo `yaml:"experiments,omitempty" json:"experiments,omitempty" envconfig:"experiments"`
 }
 
+// ToJSON marshals the config to JSON
 func (m *Config) ToJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
+// Decode marshals the config from a provided yaml file
 func (m *Config) Decode(path string) error {
 	// Marshal YAML first, then "envconfig" tags of that struct got marshalled
 	if err := unmarshalYAML(path, &m); err != nil {

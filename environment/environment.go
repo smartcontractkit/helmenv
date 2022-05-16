@@ -488,6 +488,7 @@ func (k *Environment) createNamespace(namespacePrefix string) error {
 		return err
 	}
 	k.Config.Namespace = ns.Name
+
 	log.Info().Str("Namespace", k.Config.Namespace).Msg("Created namespace")
 	return nil
 }
