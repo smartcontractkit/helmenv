@@ -9,11 +9,11 @@ app:
   readOnlyRootFilesystem: false
   resources:
     requests:
-      cpu: 500m
-      memory: 528Mi
+      cpu: 200m
+      memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 528Mi
+      cpu: 200m
+      memory: 256Mi
 
 image:
   repository: mockserver
