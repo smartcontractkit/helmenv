@@ -1,7 +1,7 @@
-golang 1.18
-golangci-lint 1.45.2
+golang 1.18.2
+golangci-lint 1.46.1
 k3d 5.4.1
 act 0.2.26
-helm 3.8.1
+helm 3.8.2
 actionlint 1.6.12
 shellcheck 0.8.0

@@ -122,6 +122,7 @@ func DeployRemoteRunnerEnvironment(
 	frameworkConfigPath,
 	networksConfigPath,
 	testExecutablePath string,
+	customEnvVars []string, // list of environment variables to pull from your env to use in the test
 ) (*Environment, error) {
 	env, err := DeployOrLoadEnvironment(config)
 	if err != nil {
@@ -143,6 +144,14 @@ func DeployRemoteRunnerEnvironment(
 		return env, err
 	}
 
+	customEnvVarMap := make(map[string]string, 0)
+	if customEnvVars != nil {
+		customEnvVarMap, err = pullCustomEnvVarValues(customEnvVars)
+		if err != nil {
+			return env, err
+		}
+	}
+
 	err = env.AddChart(&HelmChart{
 		ReleaseName: "remote-test-runner",
 		Values: map[string]interface{}{
@@ -153,6 +162,7 @@ func DeployRemoteRunnerEnvironment(
 				"slack_channel":        slackChannel,
 				"slack_user_id":        slackUser,
 				"test_file_size":       exeFile.Size(),
+				"custom_remote_env":    customEnvVarMap,
 			},
 		},
 		Index: 99,
@@ -192,6 +202,22 @@ func DeployRemoteRunnerEnvironment(
 		return nil, errors.Wrap(err, errOut.String())
 	}
 	return env, err
+}
+
+func pullCustomEnvVarValues(customEnvVars []string) (map[string]string, error) {
+	o := make(map[string]string, 0)
+	errors := ""
+	for _, k := range customEnvVars {
+		v, ok := os.LookupEnv(k)
+		if !ok {
+			errors = fmt.Sprintf("%s ,%s", errors, k)
+		}
+		o[k] = v
+	}
+	if len(errors) > 0 {
+		return nil, fmt.Errorf("Failed to find these environment variables to add to the remote runner: %s", errors[2:])
+	}
+	return o, nil
 }
 
 // LoadEnvironment loads an already deployed environment from config
