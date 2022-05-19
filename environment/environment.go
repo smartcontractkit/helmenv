@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
@@ -164,17 +163,12 @@ func DeployRemoteRunnerEnvironment(
 	}
 
 	// Add expected values into the map
-	valuesMap := map[string]interface{}{
-		"remote_test_runner": map[string]interface{}{
-			"config_file_contents": testConfigString,
-			"test_file_size":       exeFile.Size(),
-		},
-	}
-	maps.Copy(valuesMap, runnerHelmValues)
+	runnerHelmValues["remote_test_runner"].(map[string]interface{})["config_file_contents"] = testConfigString
+	runnerHelmValues["remote_test_runner"].(map[string]interface{})["test_file_size"] = exeFile.Size()
 
 	err = env.AddChart(&HelmChart{
 		ReleaseName: "remote-test-runner",
-		Values:      valuesMap,
+		Values:      runnerHelmValues,
 		Index:       99,
 	})
 	if err != nil {
