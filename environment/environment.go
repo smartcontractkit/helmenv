@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/smartcontractkit/helmenv/chaos"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"helm.sh/helm/v3/pkg/cli"
 	v1 "k8s.io/api/core/v1"
@@ -111,25 +112,43 @@ func DeployEnvironment(config *Config) (*Environment, error) {
 	return e, e.SyncConfig()
 }
 
+// CommonRemoteRunnerValues builds the map with the common expected values for remote runner
+func CommonRemoteRunnerValues(testTag, slackAPI, slackChannel, slackUser string) map[string]interface{} {
+	return map[string]interface{}{
+		"remote_test_runner": map[string]interface{}{
+			"test_name":     testTag,
+			"slack_api":     slackAPI,
+			"slack_channel": slackChannel,
+			"slack_user_id": slackUser,
+		},
+	}
+}
+
 // DeployRemoteRunnerEnvironment is used for deploying environment with a remote runner inside a pod
 // suitable for a long-running tests
 func DeployRemoteRunnerEnvironment(
 	config *Config,
-	testName,
-	slackAPI,
-	slackChannel,
-	slackUser,
 	frameworkConfigPath,
 	networksConfigPath,
 	testExecutablePath string,
-	customEnvVars []string, // list of environment variables to pull from your env to use in the test
+	runnerHelmValues map[string]interface{},
 ) (*Environment, error) {
+	// Check required values in the helm variales
+	runnerVars, ok := runnerHelmValues["remote_test_runner"]
+	if !ok {
+		return nil, fmt.Errorf("Expected 'remote_test_runner' to be part of the values provided")
+	}
+	testTag, ok := runnerVars.(map[string]interface{})["test_name"]
+	if !ok {
+		return nil, fmt.Errorf("Expected 'remote_test_runner' values to include 'test_name'")
+	}
+
 	env, err := DeployOrLoadEnvironment(config)
 	if err != nil {
 		return nil, err
 	}
 	env.Config.Persistent = true
-	log.Info().Str("Test Name", testName).
+	log.Info().Interface("Test Name", testTag).
 		Str("Namespace", env.Namespace).
 		Str("Reading from test Config File", env.Path).
 		Msg("Deploying test runner to run long-running test")
@@ -144,28 +163,19 @@ func DeployRemoteRunnerEnvironment(
 		return env, err
 	}
 
-	customEnvVarMap := make(map[string]string, 0)
-	if customEnvVars != nil {
-		customEnvVarMap, err = pullCustomEnvVarValues(customEnvVars)
-		if err != nil {
-			return env, err
-		}
+	// Add expected values into the map
+	valuesMap := map[string]interface{}{
+		"remote_test_runner": map[string]interface{}{
+			"config_file_contents": testConfigString,
+			"test_file_size":       exeFile.Size(),
+		},
 	}
+	maps.Copy(valuesMap, runnerHelmValues)
 
 	err = env.AddChart(&HelmChart{
 		ReleaseName: "remote-test-runner",
-		Values: map[string]interface{}{
-			"remote_test_runner": map[string]interface{}{
-				"test_name":            testName,
-				"config_file_contents": testConfigString,
-				"slack_api":            slackAPI,
-				"slack_channel":        slackChannel,
-				"slack_user_id":        slackUser,
-				"test_file_size":       exeFile.Size(),
-				"custom_remote_env":    customEnvVarMap,
-			},
-		},
-		Index: 99,
+		Values:      valuesMap,
+		Index:       99,
 	})
 	if err != nil {
 		return env, err
@@ -202,22 +212,6 @@ func DeployRemoteRunnerEnvironment(
 		return nil, errors.Wrap(err, errOut.String())
 	}
 	return env, err
-}
-
-func pullCustomEnvVarValues(customEnvVars []string) (map[string]string, error) {
-	o := make(map[string]string, 0)
-	errors := ""
-	for _, k := range customEnvVars {
-		v, ok := os.LookupEnv(k)
-		if !ok {
-			errors = fmt.Sprintf("%s ,%s", errors, k)
-		}
-		o[k] = v
-	}
-	if len(errors) > 0 {
-		return nil, fmt.Errorf("Failed to find these environment variables to add to the remote runner: %s", errors[2:])
-	}
-	return o, nil
 }
 
 // LoadEnvironment loads an already deployed environment from config

@@ -53,6 +53,15 @@ spec:
           value: {{ $value | quote}}
   {{- end }}
 {{- end }}
+{{- range $key, $value := .Values.remote_test_runner.secrets }}
+  {{- if $value }}
+        - name: {{ $key | upper}}
+          valueFrom:
+            secretKeyRef:
+              name: remote-runner-secrets
+              key: {{ $key | upper}}
+  {{- end }}
+{{- end }}
       resources:
         requests:
           memory: {{ .Values.resources.requests.memory }}
