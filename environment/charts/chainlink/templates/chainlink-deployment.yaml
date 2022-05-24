@@ -134,13 +134,13 @@ spec:
               mountPath: /etc/node-secrets-volume/
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: {{ .Values.chainlink.web_port }}
             initialDelaySeconds: 1
             periodSeconds: 5
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: {{ .Values.chainlink.web_port }}
             initialDelaySeconds: 1
             periodSeconds: 5
