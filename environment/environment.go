@@ -132,6 +132,22 @@ func DeployRemoteRunnerEnvironment(
 	testExecutablePath string,
 	runnerHelmValues map[string]interface{},
 ) (*Environment, error) {
+	env, err := DeployOrLoadEnvironment(config)
+	if err != nil {
+		return nil, err
+	}
+	return DeployRemoteRunnerToEnv(env, frameworkConfigPath, networksConfigPath, testExecutablePath, runnerHelmValues)
+}
+
+// DeployRemoteRunnerToEnv Adds the remote runner to the charts and deploys it
+// useful when you have your env deployed already and just need to add it on
+func DeployRemoteRunnerToEnv(
+	env *Environment,
+	frameworkConfigPath,
+	networksConfigPath,
+	testExecutablePath string,
+	runnerHelmValues map[string]interface{},
+) (*Environment, error) {
 	// Check required values in the helm variales
 	runnerVars, ok := runnerHelmValues["remote_test_runner"]
 	if !ok {
@@ -140,11 +156,6 @@ func DeployRemoteRunnerEnvironment(
 	testTag, ok := runnerVars.(map[string]interface{})["test_name"]
 	if !ok {
 		return nil, fmt.Errorf("Expected 'remote_test_runner' values to include 'test_name'")
-	}
-
-	env, err := DeployOrLoadEnvironment(config)
-	if err != nil {
-		return nil, err
 	}
 	env.Config.Persistent = true
 	log.Info().Interface("Test Name", testTag).
