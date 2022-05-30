@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/ghodss/yaml v1.0.0
-	github.com/imdario/mergo v0.3.12
+	github.com/imdario/mergo v0.3.13
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/urfave/cli/v2 v2.6.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0
 	helm.sh/helm/v3 v3.9.0-rc.1
 	k8s.io/api v0.24.0
 	k8s.io/apimachinery v0.24.0
