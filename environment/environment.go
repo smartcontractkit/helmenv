@@ -167,6 +167,7 @@ func DeployRemoteRunnerToEnv(
 	if err != nil {
 		return env, err
 	}
+
 	testConfigString := string(testConfigBytes)
 	exeFile, err := os.Stat(testExecutablePath)
 	if err != nil {
@@ -188,9 +189,14 @@ func DeployRemoteRunnerToEnv(
 	err = env.Deploy("remote-test-runner")
 	if err != nil {
 		log.Error().Err(err).Msg("Error while deploying the test runner to the environment")
-		if err := env.Teardown(); err != nil {
-			return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		c, _ := env.Charts.Get("remote-test-runner")
+		c.Uninstall()
+		if err := env.Deploy("remote-test-runner"); err != nil {
+			return nil, errors.Wrapf(err, "failed to deploy remote-test-runner")
 		}
+		// if err := env.Teardown(); err != nil {
+		// 	return nil, errors.Wrapf(err, "failed to shutdown namespace")
+		// }
 		return nil, err
 	}
 	if err := env.SyncConfig(); err != nil {
