@@ -34,4 +34,15 @@ spec:
 {{- end }}
           command: ["solana-test-validator"]
           args: ["-r", "--mint", "AAxAoGfkbWnbgsiQeAanwUvjv6bQrM5JS8Vxv1ckzVxg"]
-
+{{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+{{- end }}

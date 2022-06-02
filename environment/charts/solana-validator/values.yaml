@@ -11,3 +11,11 @@ sol:
     limits:
       cpu: 2000m
       memory: 4000Mi
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
