@@ -59,8 +59,6 @@ env:
 
 podAnnotations: {}
 
-nodeSelector: {}
-
-tolerations: []
-
+nodeSelector: { "node-role": "foundations" }
+tolerations: [ { "key": "node-role", "operator": "Equal", "value": "foundations", "effect": "NoSchedule" } ]
 affinity: {}
