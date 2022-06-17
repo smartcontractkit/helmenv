@@ -1,7 +1,7 @@
 chainlink:
   image:
     image: public.ecr.aws/chainlink/chainlink
-    version: 1.2.1
+    version: 1.4.1-nonroot
   web_port: 6688
   p2p_port: 8090
   resources:
@@ -30,29 +30,23 @@ env:
   eth_chain_id: "1337"
   allow_origins: '*'
   chainlink_dev: "true"
-  eth_disabled: "false"
   feature_external_initiators: "false"
   chainlink_pgpassword: node
   chainlink_port: "6688"
   chainlink_tls_port: "0"
-  default_http_allow_unrestricted_network_access: "true"
-  enable_bulletproof_tx_manager: "true"
   feature_offchain_reporting: "true"
-  json_console: "false"
+  json_console: "true"
   log_level: debug
-  max_export_html_threads: "2"
   minimum_contract_payment_link_juels: "0"
-  ocr_trace_logging: "true"
   p2p_listen_ip: 0.0.0.0
   p2p_listen_port: "6690"
   root: ./clroot
   secure_cookies: "false"
   eth_max_in_flight_transactions: "16"
-  keeper_default_transaction_queue_depth: "1"
   keeper_registry_sync_interval: "5s"
-  keeper_minimum_required_confirmations: "1"
   keeper_registry_perform_gas_overhead: "150000"
   keeper_turn_look_back: "0"
   explorer_url:
   explorer_access_key:
   explorer_secret:
+  session_timeout: "999h"
