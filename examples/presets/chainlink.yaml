@@ -3,10 +3,10 @@ charts:
   geth:
     index: 1
   mockserver-config:
-    index: 2
+    index: 1
   mockserver:
-    index: 3
+    index: 2
   chainlink:
-    index: 4
+    index: 2
     values:
       replicas: 1
