@@ -56,3 +56,11 @@ env:
   explorer_url:
   explorer_access_key:
   explorer_secret:
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

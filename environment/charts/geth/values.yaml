@@ -91,4 +91,10 @@ config_args:
   "--miner.gasprice": "10000000000"
   "--miner.gastarget": "80000000000"
   
-  
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
