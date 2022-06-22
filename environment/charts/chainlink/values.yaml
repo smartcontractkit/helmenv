@@ -1,7 +1,7 @@
 chainlink:
   image:
     image: public.ecr.aws/chainlink/chainlink
-    version: 1.4.1-nonroot
+    version: 1.5.0-nonroot
   web_port: 6688
   p2p_port: 8090
   resources:
