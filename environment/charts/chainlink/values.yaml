@@ -50,3 +50,11 @@ env:
   explorer_access_key:
   explorer_secret:
   session_timeout: "999h"
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

@@ -66,15 +66,7 @@ spec:
                 - -U
                 - postgres
             initialDelaySeconds: 1
-            periodSeconds: 5
-          readinessProbe:
-            exec:
-              command:
-                - pg_isready
-                - -U
-                - postgres
-            initialDelaySeconds: 1
-            periodSeconds: 5
+            periodSeconds: 30
           startupProbe:
             exec:
               command:
@@ -137,13 +129,7 @@ spec:
               path: /health
               port: {{ .Values.chainlink.web_port }}
             initialDelaySeconds: 1
-            periodSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: {{ .Values.chainlink.web_port }}
-            initialDelaySeconds: 1
-            periodSeconds: 5
+            periodSeconds: 30
           startupProbe:
             httpGet:
               path: /
@@ -158,3 +144,15 @@ spec:
             limits:
               memory: {{ .Values.chainlink.resources.limits.memory }}
               cpu: {{ .Values.chainlink.resources.limits.cpu }}
+{{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+{{- end }}
