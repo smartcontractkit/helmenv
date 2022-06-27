@@ -24,32 +24,32 @@ db:
 replicas: 1
 
 env:
-  database_url: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
-  database_name: chainlink
-  eth_url: ws://geth:8546
-  eth_chain_id: "1337"
-  allow_origins: '*'
-  chainlink_dev: "true"
-  feature_external_initiators: "false"
-  chainlink_pgpassword: node
-  chainlink_port: "6688"
-  chainlink_tls_port: "0"
-  feature_offchain_reporting: "true"
-  json_console: "true"
-  log_level: debug
-  minimum_contract_payment_link_juels: "0"
-  p2p_listen_ip: 0.0.0.0
-  p2p_listen_port: "6690"
-  root: ./clroot
-  secure_cookies: "false"
-  eth_max_in_flight_transactions: "16"
-  keeper_registry_sync_interval: "5s"
-  keeper_registry_perform_gas_overhead: "150000"
-  keeper_turn_look_back: "0"
-  explorer_url:
-  explorer_access_key:
-  explorer_secret:
-  session_timeout: "999h"
+  DATABASE_URL: postgresql://postgres:node@0.0.0.0/chainlink?sslmode=disable
+  DATABASE_NAME: chainlink
+  ETH_URL: ws://geth:8546
+  ETH_CHAIN_ID: "1337"
+  ALLOW_ORIGINS: '*'
+  CHAINLINK_DEV: "true"
+  FEATURE_EXTERNAL_INITIATORS: "false"
+  CHAINLINK_PGPASSWORD: node
+  CHAINLINK_PORT: "6688"
+  CHAINLINK_TLS_PORT: "0"
+  FEATURE_OFFCHAIN_REPORTING: "true"
+  JSON_CONSOLE: "false"
+  LOG_LEVEL: debug
+  MINIMUM_CONTRACT_PAYMENT_LINK_JUELS: "0"
+  P2P_LISTEN_IP: 0.0.0.0
+  P2P_LISTEN_PORT: "6690"
+  ROOT: ./clroot
+  SECURE_COOKIES: "false"
+  ETH_MAX_IN_FLIGHT_TRANSACTIONS: "16"
+  KEEPER_REGISTRY_SYNC_INTERVAL: "5s"
+  KEEPER_REGISTRY_PERFORM_GAS_OVERHEAD: "150000"
+  KEEPER_TURN_LOOK_BACK: "0"
+  EXPLORER_URL:
+  EXPLORER_ACCESS_KEY:
+  EXPLORER_SECRET:
+  SESSION_TIMEOUT: "999h"
 
 podAnnotations: {}
 

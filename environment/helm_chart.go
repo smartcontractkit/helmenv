@@ -352,7 +352,7 @@ func (hc *HelmChart) loadChart() (*chart.Chart, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Interface("Values", loadedChart.Values).Msg("Merged chart values")
+	log.Info().Interface("Values", loadedChart.Values).Msg("Merged chart values")
 	return loadedChart, nil
 }
 
